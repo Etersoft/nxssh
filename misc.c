@@ -61,6 +61,9 @@
 #include "misc.h"
 #include "log.h"
 #include "ssh.h"
+#include "key.h"
+#include "readconf.h"
+extern Options options;
 
 /* remove newline at end of string */
 char *
@@ -609,13 +612,26 @@ tilde_expand_filename(const char *filename, uid_t uid)
 	} else if ((pw = getpwuid(uid)) == NULL)	/* ~/path */
 		fatal("tilde_expand_filename: No such uid %ld", (long)uid);
 
-	/* Make sure directory has a trailing '/' */
-	len = strlen(pw->pw_dir);
-	if (len == 0 || pw->pw_dir[len - 1] != '/')
-		sep = "/";
-	else
-		sep = "";
+	if(options.home)
+    {
+	    if (strlcpy(ret, options.home, sizeof(ret)) >= sizeof(ret))
+			fatal("tilde_expand_filename: Path too long");
 
+	/* Make sure directory has a trailing '/' */
+	    len = strlen(options.home);
+	if ((len == 0 || options.home[len - 1] != '/') &&
+	        strlcat(ret, "/", sizeof(ret)) >= sizeof(ret))
+		fatal("tilde_expand_filename: Path too long");
+    }
+    else
+    {
+		/* Make sure directory has a trailing '/' */
+		len = strlen(pw->pw_dir);
+		if (len == 0 || pw->pw_dir[len - 1] != '/')
+			sep = "/";
+		else
+			sep = "";
+	}
 	/* Skip leading '/' from specified path */
 	if (path != NULL)
 		filename = path + 1;
