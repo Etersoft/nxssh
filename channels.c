@@ -353,6 +353,12 @@ channel_new(char *ctype, int type, int rfd, int wfd, int efd,
 	c->istate = CHAN_INPUT_OPEN;
 	c->flags = 0;
 	channel_register_fds(c, rfd, wfd, efd, extusage, nonblock, 0);
+
+	#ifdef TEST
+	logit("NX> 280 Channel opened with in: %d out: %d err: %d",
+		rfd, wfd, efd);
+	#endif
+
 	c->notbefore = 0;
 	c->self = found;
 	c->type = type;
@@ -1739,6 +1745,17 @@ channel_handle_rfd(Channel *c, fd_set *readset, fd_set *writeset)
 	if (c->rfd != -1 && (force || FD_ISSET(c->rfd, readset))) {
 		errno = 0;
 		len = read(c->rfd, buf, sizeof(buf));
+		#ifdef TEST
+		logit("NX> 280 Reading: %u bytes from fd: %d in context: 4",
+			sizeof(buf) - 1, c->rfd);
+		#endif
+
+
+		#ifdef TEST
+		logit("NX> 280 Read: %d bytes error: %d in context: 4",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len < 0 && (errno == EINTR ||
 		    ((errno == EAGAIN || errno == EWOULDBLOCK) && !force)))
 			return 1;
@@ -1829,6 +1846,17 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 			dlen = MIN(dlen, 8*1024);
 #endif
 
+		#ifdef TEST
+		logit("NX> 280 Writing: %d bytes to fd: %d in context: 5",
+			dlen, c->wfd);
+		#endif
+
+
+		#ifdef TEST
+		logit("NX> 280 Written: %d bytes error: %d in context: 5",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		len = write(c->wfd, buf, dlen);
 		if (len < 0 &&
 		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK))
@@ -1881,8 +1909,19 @@ channel_handle_efd(Channel *c, fd_set *readset, fd_set *writeset)
 		if (c->extended_usage == CHAN_EXTENDED_WRITE &&
 		    FD_ISSET(c->efd, writeset) &&
 		    buffer_len(&c->extended) > 0) {
+			#ifdef TEST
+			logit("NX> 280 Writing: %d bytes to fd: %d in context 6",
+				buffer_len(&c->extended), c->efd);
+			#endif
+
 			len = write(c->efd, buffer_ptr(&c->extended),
 			    buffer_len(&c->extended));
+
+			#ifdef TEST
+			logit("NX> 280 Written: %d bytes error: %d in context: 6",
+				len, (len < 0 ? errno : 0));
+			#endif
+
 			debug2("channel %d: written %d to efd %d",
 			    c->self, len, c->efd);
 			if (len < 0 && (errno == EINTR || errno == EAGAIN ||
@@ -1900,7 +1939,18 @@ channel_handle_efd(Channel *c, fd_set *readset, fd_set *writeset)
 		    (c->extended_usage == CHAN_EXTENDED_READ ||
 		    c->extended_usage == CHAN_EXTENDED_IGNORE) &&
 		    (c->detach_close || FD_ISSET(c->efd, readset))) {
+			#ifdef TEST
+			logit("NX> 280 Reading: %u bytes from fd: %d in context: 5",
+				sizeof(buf), c->efd);
+			#endif
+
 			len = read(c->efd, buf, sizeof(buf));
+
+			#ifdef TEST
+			logit("NX> 280 Read: %d bytes error: %d in context: 5",
+				len, (len < 0 ? errno : 0));
+			#endif
+
 			debug2("channel %d: read %d from efd %d",
 			    c->self, len, c->efd);
 			if (len < 0 && (errno == EINTR || ((errno == EAGAIN ||
@@ -2087,8 +2137,19 @@ channel_post_output_drain_13(Channel *c, fd_set *readset, fd_set *writeset)
 
 	/* Send buffered output data to the socket. */
 	if (FD_ISSET(c->sock, writeset) && buffer_len(&c->output) > 0) {
+		#ifdef TEST
+		logit("NX> 280 Writing: %d bytes to fd: %d in context 7",
+			buffer_len(&c->output), c->sock);
+		#endif
+
 		len = write(c->sock, buffer_ptr(&c->output),
 			    buffer_len(&c->output));
+
+		#ifdef TEST
+		logit("NX> 280 Written: %d bytes error: %d in context: 7",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len <= 0)
 			buffer_clear(&c->output);
 		else

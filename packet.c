@@ -1476,7 +1476,19 @@ ssh_packet_read_seqnr(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 			goto out;
 		}
 		/* Read data from the socket. */
+
+		#ifdef TEST
+		logit("NX> 280 Reading: %u bytes from fd: %d in context: 7",
+			sizeof(buf), connection_in);
+		#endif
+
 		len = read(state->connection_in, buf, sizeof(buf));
+
+		#ifdef TEST
+		logit("NX> 280 Read: %d bytes error: %d in context: 7",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len == 0) {
 			r = SSH_ERR_CONN_CLOSED;
 			goto out;
@@ -2207,8 +2219,19 @@ ssh_packet_write_poll(struct ssh *ssh)
 	int r;
 
 	if (len > 0) {
+		#ifdef TEST
+		logit("NX> 280 Writing: %d bytes to fd: %d in context: 8",
+			len, connection_out);
+		#endif
+
 		len = write(state->connection_out,
 		    sshbuf_ptr(state->output), len);
+
+		#ifdef TEST
+		logit("NX> 280 Written: %d bytes error: %d in context: 8",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len == -1) {
 			if (errno == EINTR || errno == EAGAIN ||
 			    errno == EWOULDBLOCK)

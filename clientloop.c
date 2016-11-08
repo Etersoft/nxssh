@@ -494,7 +494,19 @@ client_check_initial_eof_on_stdin(void)
 		enter_non_blocking();
 
 		/* Check for immediate EOF on stdin. */
+
+		#ifdef TEST
+		logit("NX> 280 Reading: %d bytes from fd: %d in context: 1",
+			1, fileno(stdin));
+		#endif
+
 		len = read(fileno(stdin), buf, 1);
+
+		#ifdef TEST
+		logit("NX> 280 Read: %d bytes error: %d in context: 1",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len == 0) {
 			/*
 			 * EOF.  Record that we have seen it and send
@@ -774,7 +786,19 @@ client_process_net_input(fd_set *readset)
 	 */
 	if (FD_ISSET(connection_in, readset)) {
 		/* Read as much as possible. */
+
+		#ifdef TEST
+		logit("NX> 280 Reading: %u bytes from fd: %d in context: 2",
+			sizeof(buf), connection_in);
+		#endif
+
 		len = read(connection_in, buf, sizeof(buf));
+
+		#ifdef TEST
+		logit("NX> 280 Read: %d bytes error: %d in context: 2",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len == 0) {
 			/*
 			 * Received EOF.  The remote host has closed the
@@ -1344,7 +1368,18 @@ client_process_input(fd_set *readset)
 	/* Read input from stdin. */
 	if (FD_ISSET(fileno(stdin), readset)) {
 		/* Read as much as possible. */
+		#ifdef TEST
+		logit("NX> 280 Reading: %u bytes from fd: %d in context: 3",
+			sizeof(buf), fileno(stdin));
+		#endif
+
 		len = read(fileno(stdin), buf, sizeof(buf));
+
+		#ifdef TEST
+		logit("NX> 280 Read: %d bytes error: %d in context: 3",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len < 0 &&
 		    (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK))
 			return;		/* we'll try again later */
@@ -1400,8 +1435,20 @@ client_process_output(fd_set *writeset)
 	/* Write buffered output to stdout. */
 	if (FD_ISSET(fileno(stdout), writeset)) {
 		/* Write as much data as possible. */
+
+		#ifdef TEST
+		logit("NX> 280 Writing: %d bytes to fd: %d in context: 1",
+			buffer_len(&stdout_buffer), fileno(stdout));
+		#endif
+
 		len = write(fileno(stdout), buffer_ptr(&stdout_buffer),
 		    buffer_len(&stdout_buffer));
+
+		#ifdef TEST
+			logit("NX> 280 Written: %d bytes error: %d in context: 1",
+				len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len <= 0) {
 			if (errno == EINTR || errno == EAGAIN ||
 			    errno == EWOULDBLOCK)
@@ -1424,8 +1471,20 @@ client_process_output(fd_set *writeset)
 	/* Write buffered output to stderr. */
 	if (FD_ISSET(fileno(stderr), writeset)) {
 		/* Write as much data as possible. */
+
+		#ifdef TEST
+			logit("NX> 280 Writing: %d bytes to fd: %d in context: 2",
+				buffer_len(&stderr_buffer), fileno(stderr));
+		#endif
+
 		len = write(fileno(stderr), buffer_ptr(&stderr_buffer),
 		    buffer_len(&stderr_buffer));
+
+		#ifdef TEST
+			logit("NX> 280 Written: %d bytes error: %d in context: 2",
+				len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len <= 0) {
 			if (errno == EINTR || errno == EAGAIN ||
 			    errno == EWOULDBLOCK)
@@ -1767,8 +1826,19 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 
 	/* Output any buffered data for stdout. */
 	if (buffer_len(&stdout_buffer) > 0) {
+		#ifdef TEST
+		logit("NX> 280 Writing: %d bytes to fd: %d in context: 3",
+			buffer_len(&stdout_buffer), fileno(stdout));
+		#endif
+
 		len = atomicio(vwrite, fileno(stdout),
 		    buffer_ptr(&stdout_buffer), buffer_len(&stdout_buffer));
+
+		#ifdef TEST
+		logit("NX> 280 Written: %d bytes error: %d in context: 3",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len < 0 || (u_int)len != buffer_len(&stdout_buffer))
 			error("Write failed flushing stdout buffer.");
 		else
@@ -1777,8 +1847,19 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 
 	/* Output any buffered data for stderr. */
 	if (buffer_len(&stderr_buffer) > 0) {
+		#ifdef TEST
+		logit("NX> 280 Writing: %d bytes to fd: %d in context: 4",
+			buffer_len(&stderr_buffer), fileno(stderr));
+		#endif
+
 		len = atomicio(vwrite, fileno(stderr),
 		    buffer_ptr(&stderr_buffer), buffer_len(&stderr_buffer));
+
+		#ifdef TEST
+		logit("NX> 280 Written: %d bytes error: %d in context: 4",
+			len, (len < 0 ? errno : 0));
+		#endif
+
 		if (len < 0 || (u_int)len != buffer_len(&stderr_buffer))
 			error("Write failed flushing stderr buffer.");
 		else
