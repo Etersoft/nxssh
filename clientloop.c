@@ -625,6 +625,19 @@ client_global_request_reply(int type, u_int32_t seq, void *ctxt)
 static void
 server_alive_check(void)
 {
+	if (nx_switch_internal == 1)
+	{
+		/*
+		* We let NX handle the connection timeout.
+		*/
+
+		#ifdef TEST
+		debug("NX> 282 Skipping the server alive check");
+		#endif
+
+		return;
+	}
+
 	if (packet_inc_alive_timeouts() > options.server_alive_count_max) {
 		logit("Timeout, server %s not responding.", host);
 		cleanup_exit(255);
