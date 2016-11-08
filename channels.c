@@ -1910,7 +1910,10 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 
 		if (len < 0 &&
 		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK))
+		{
+			usleep(500);
 			return 1;
+		}
 		if (len <= 0) {
 			if (c->type != SSH_CHANNEL_OPEN) {
 				debug2("channel %d: not open", c->self);
