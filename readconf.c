@@ -150,8 +150,8 @@ typedef enum {
 	oCertificateFile, oAddKeysToAgent, oIdentityAgent,
 	oUser, oEscapeChar, oRhostsRSAAuthentication, oProxyCommand,
 	oGlobalKnownHostsFile, oUserKnownHostsFile, oConnectionAttempts,
-	oBatchMode, oCheckHostIP, oStrictHostKeyChecking, oCompression,
-	oCompressionLevel, oTCPKeepAlive, oNumberOfPasswordPrompts,
+	oBatchMode, oCheckHostIP, oStrictHostKeyChecking, oHostKeyAdd, oOnlyCheck,
+	oCompression, oCompressionLevel, oTCPKeepAlive, oNumberOfPasswordPrompts,
 	oUsePrivilegedPort, oLogLevel, oCiphers, oProtocol, oMacs,
 	oPubkeyAuthentication,
 	oKbdInteractiveAuthentication, oKbdInteractiveDevices, oHostKeyAlias,
@@ -261,6 +261,8 @@ static struct {
 	{ "batchmode", oBatchMode },
 	{ "checkhostip", oCheckHostIP },
 	{ "stricthostkeychecking", oStrictHostKeyChecking },
+	{ "hostkeyadd", oHostKeyAdd },
+	{ "onlycheck", oOnlyCheck },
 	{ "compression", oCompression },
 	{ "tcpkeepalive", oTCPKeepAlive },
 	{ "keepalive", oTCPKeepAlive },				/* obsolete */
@@ -993,6 +995,16 @@ parse_time:
 	case oStrictHostKeyChecking:
 		intptr = &options->strict_host_key_checking;
 		multistate_ptr = multistate_yesnoask;
+		goto parse_multistate;
+
+	case oHostKeyAdd:
+		intptr = &options->hostkeyadd;
+		multistate_ptr = multistate_flag;
+		goto parse_multistate;
+
+	case oOnlyCheck:
+		intptr = &options->onlycheck;
+		multistate_ptr = multistate_flag;
 		goto parse_multistate;
 
 	case oCompression:
@@ -1807,6 +1819,8 @@ initialize_options(Options * options)
 	options->batch_mode = -1;
 	options->check_host_ip = -1;
 	options->strict_host_key_checking = -1;
+	options->hostkeyadd = -1;
+	options->onlycheck = -1;
 	options->compression = -1;
 	options->tcp_keep_alive = -1;
 	options->compression_level = -1;
@@ -1879,6 +1893,7 @@ initialize_options(Options * options)
 	options->update_hostkeys = -1;
 	options->hostbased_key_types = NULL;
 	options->pubkey_key_types = NULL;
+	options->home = NULL;
 }
 
 /*
@@ -1958,6 +1973,10 @@ fill_default_options(Options * options)
 		options->check_host_ip = 1;
 	if (options->strict_host_key_checking == -1)
 		options->strict_host_key_checking = 2;	/* 2 is default */
+	if (options->hostkeyadd == -1)
+		options->hostkeyadd = 0;	/* 0 is default */
+	if (options->onlycheck == -1)
+		options->onlycheck = 0;	/* 0 is default */
 	if (options->compression == -1)
 		options->compression = 0;
 	if (options->tcp_keep_alive == -1)

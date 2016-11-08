@@ -53,6 +53,8 @@ typedef struct {
 	int     batch_mode;	/* Batch mode: do not ask for passwords. */
 	int     check_host_ip;	/* Also keep track of keys for IP address */
 	int     strict_host_key_checking;	/* Strict host key checking. */
+	int     hostkeyadd;
+	int     onlycheck;
 	int     compression;	/* Compress packets in both directions. */
 	int     compression_level;	/* Compression level 1 (fast) to 9
 					 * (best). */
@@ -169,6 +171,7 @@ typedef struct {
 	char   *jump_extra;
 
 	char	*ignored_unknown; /* Pattern list of unknown tokens to ignore */
+	char   *home;
 }       Options;
 
 #define SSH_CANONICALISE_NO	0
