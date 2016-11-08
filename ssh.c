@@ -582,7 +582,7 @@ process_config_files(const char *host_arg, struct passwd *pw, int post_canon)
 			fatal("Can't open user config file %.100s: "
 			    "%.100s", config, strerror(errno));
 	} else {
-		r = snprintf(buf, sizeof buf, "%s/%s", pw->pw_dir,
+		r = snprintf(buf, sizeof buf, "%s/%s", options.home,
 		    _PATH_SSH_USER_CONFFILE);
 		if (r > 0 && (size_t)r < sizeof(buf))
 			(void)read_config_file(buf, pw, host, host_arg,
@@ -759,6 +759,19 @@ main(int ac, char **av)
 	 * set.
 	 */
 	initialize_options(&options);
+
+	/* Using $HOME instead of pw->pw_dir. If $HOME is not set the original
+	 * method is used. */
+
+	options.home = getenv("HOME");
+
+	if (!options.home) {
+		options.home = pw->pw_dir;
+	}
+	else if (stat(options.home, &st) < 0) {
+		fprintf(stderr, "Warning: $HOME directory '%s' "
+		    "does not exist.\n", options.home);
+	}
 
 	/* Parse command-line arguments. */
 	host = NULL;
@@ -1601,8 +1614,8 @@ main(int ac, char **av)
 	 * directory if it doesn't already exist.
 	 */
 	if (config == NULL) {
-		r = snprintf(buf, sizeof buf, "%s%s%s", pw->pw_dir,
-		    strcmp(pw->pw_dir, "/") ? "/" : "", _PATH_SSH_USER_DIR);
+		r = snprintf(buf, sizeof buf, "%s%s%s", options.home,
+		    strcmp(options.home, "/") ? "/" : "", _PATH_SSH_USER_DIR);
 		if (r > 0 && (size_t)r < sizeof(buf) && stat(buf, &st) < 0) {
 #ifdef WITH_SELINUX
 			ssh_selinux_setfscreatecon(buf);
