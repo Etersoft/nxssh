@@ -198,8 +198,8 @@ ssh_kex2(char *host, struct sockaddr *hostaddr, u_short port)
 	}
 
 	if (options.rekey_limit || options.rekey_interval)
-		packet_set_rekey_limits(options.rekey_limit,
-		    options.rekey_interval);
+		packet_set_rekey_limits((u_int32_t)options.rekey_limit,
+		    (time_t)options.rekey_interval);
 
 	/* start key exchange */
 	if ((r = kex_setup(active_state, myproposal)) != 0)
@@ -366,6 +366,34 @@ Authmethod authmethods[] = {
 	{NULL, NULL, NULL, NULL, NULL}
 };
 
+Authmethod nxauthmethods_pubkey[] = {
+	{"publickey",
+		userauth_pubkey,
+		&options.pubkey_authentication,
+		NULL},
+	{"none",
+		userauth_none,
+		NULL,
+		NULL},
+	{NULL, NULL, NULL, NULL}
+};
+
+Authmethod nxauthmethods_passwords[] = {
+	{"keyboard-interactive",
+		userauth_kbdint,
+		&options.kbd_interactive_authentication,
+		&options.batch_mode},
+        {"password",
+                userauth_passwd,
+                &options.password_authentication,
+                &options.batch_mode},
+        {"none",
+                userauth_none,
+                NULL,
+                NULL},
+        {NULL, NULL, NULL, NULL}
+};
+
 void
 ssh_userauth2(const char *local_user, const char *server_user, char *host,
     Sensitive *sensitive)
@@ -410,9 +438,13 @@ ssh_userauth2(const char *local_user, const char *server_user, char *host,
 	pubkey_cleanup(&authctxt);
 	ssh_dispatch_range(ssh, SSH2_MSG_USERAUTH_MIN, SSH2_MSG_USERAUTH_MAX, NULL);
 
-	if (!authctxt.success)
-		fatal("Authentication failed.");
-	debug("Authentication succeeded (%s).", authctxt.method->name);
+	if (NxAuthOnlyModeEnabled) {
+		fprintf(stdout, "NX> 206 ssh-userauth2 successful: method %s\n", authctxt.method->name);
+		fflush(stdout);
+		cleanup_exit(0);
+	} else {
+		debug("Authentication succeeded (%s).", authctxt.method->name);
+	}
 }
 
 /* ARGSUSED */
@@ -472,8 +504,16 @@ userauth(Authctxt *authctxt, char *authlist)
 	}
 	for (;;) {
 		Authmethod *method = authmethod_get(authlist);
-		if (method == NULL)
-			fatal("Permission denied (%s).", authlist);
+		if (method == NULL) {
+			if (NxModeEnabled || NxAuthOnlyModeEnabled || NXServerMode || NxAdminModeEnabled) {
+				fprintf(stdout, "NX> 204 Authentication failed.\n");
+				fflush(stdout);
+				/*fatal_cleanup();*/
+				cleanup_exit(255);
+			}
+			else
+				fatal("Permission denied (%s).", authlist);
+		}
 		authctxt->method = method;
 
 		/* reset the per method handler */
@@ -903,14 +943,19 @@ userauth_passwd(Authctxt *authctxt)
 	const char *host = options.host_key_alias ?  options.host_key_alias :
 	    authctxt->host;
 
-	if (attempt++ >= options.number_of_password_prompts)
+	if ((NxAuthOnlyModeEnabled && attempt >= 1) || (attempt++ >= options.number_of_password_prompts))
 		return 0;
 
 	if (attempt != 1)
 		error("Permission denied, please try again.");
 
-	snprintf(prompt, sizeof(prompt), "%.30s@%.128s's password: ",
-	    authctxt->server_user, host);
+	if (NxAuthOnlyModeEnabled || NxModeEnabled || NXStdinPassEnabled) {
+			snprintf(prompt, sizeof(prompt), "NX> 205 %.30s@%.128s's password: ",
+				authctxt->server_user, authctxt->host);
+	} else {
+		snprintf(prompt, sizeof(prompt), "%.30s@%.128s's password: ",
+		authctxt->server_user, host);
+	}
 	password = read_passphrase(prompt, 0);
 	packet_start(SSH2_MSG_USERAUTH_REQUEST);
 	packet_put_cstring(authctxt->server_user);
@@ -939,14 +984,14 @@ input_userauth_passwd_changereq(int type, u_int32_t seqnr, void *ctxt)
 	Authctxt *authctxt = ctxt;
 	char *info, *lang, *password = NULL, *retype = NULL;
 	char prompt[150];
-	const char *host;
+	const char *host = options.host_key_alias ? options.host_key_alias :
+	    authctxt->host;
 
 	debug2("input_userauth_passwd_changereq");
 
 	if (authctxt == NULL)
 		fatal("input_userauth_passwd_changereq: "
 		    "no authentication context");
-	host = options.host_key_alias ? options.host_key_alias : authctxt->host;
 
 	info = packet_get_string(NULL);
 	lang = packet_get_string(NULL);
@@ -1001,11 +1046,11 @@ input_userauth_passwd_changereq(int type, u_int32_t seqnr, void *ctxt)
 }
 
 static const char *
-key_sign_encode(const struct sshkey *key)
+identity_sign_encode(struct identity *id)
 {
 	struct ssh *ssh = active_state;
 
-	if (key->type == KEY_RSA) {
+	if (id->key->type == KEY_RSA) {
 		switch (ssh->kex->rsa_sha2) {
 		case 256:
 			return "rsa-sha2-256";
@@ -1013,7 +1058,7 @@ key_sign_encode(const struct sshkey *key)
 			return "rsa-sha2-512";
 		}
 	}
-	return key_ssh_name(key);
+	return key_ssh_name(id->key);
 }
 
 static int
@@ -1022,11 +1067,14 @@ identity_sign(struct identity *id, u_char **sigp, size_t *lenp,
 {
 	Key *prv;
 	int ret;
+	const char *alg;
+
+	alg = identity_sign_encode(id);
 
 	/* the agent supports this key */
 	if (id->key != NULL && id->agent_fd != -1)
 		return ssh_agent_sign(id->agent_fd, id->key, sigp, lenp,
-		    data, datalen, key_sign_encode(id->key), compat);
+		    data, datalen, alg, compat);
 
 	/*
 	 * we have already loaded the private key or
@@ -1034,14 +1082,13 @@ identity_sign(struct identity *id, u_char **sigp, size_t *lenp,
 	 */
 	if (id->key != NULL &&
 	    (id->isprivate || (id->key->flags & SSHKEY_FLAG_EXT)))
-		return (sshkey_sign(id->key, sigp, lenp, data, datalen,
-		    key_sign_encode(id->key), compat));
+		return (sshkey_sign(id->key, sigp, lenp, data, datalen, alg,
+		    compat));
 
 	/* load the private key from the file */
 	if ((prv = load_identity_file(id)) == NULL)
 		return SSH_ERR_KEY_NOT_FOUND;
-	ret = sshkey_sign(prv, sigp, lenp, data, datalen,
-	    key_sign_encode(prv), compat);
+	ret = sshkey_sign(prv, sigp, lenp, data, datalen, alg, compat);
 	sshkey_free(prv);
 	return (ret);
 }
@@ -1107,7 +1154,7 @@ sign_and_send_pubkey(Authctxt *authctxt, Identity *id)
 	} else {
 		buffer_put_cstring(&b, authctxt->method->name);
 		buffer_put_char(&b, have_sig);
-		buffer_put_cstring(&b, key_sign_encode(id->key));
+		buffer_put_cstring(&b, identity_sign_encode(id));
 	}
 	buffer_put_string(&b, blob, bloblen);
 
@@ -1223,7 +1270,7 @@ send_pubkey_test(Authctxt *authctxt, Identity *id)
 	packet_put_cstring(authctxt->method->name);
 	packet_put_char(have_sig);
 	if (!(datafellows & SSH_BUG_PKAUTH))
-		packet_put_cstring(key_sign_encode(id->key));
+		packet_put_cstring(identity_sign_encode(id));
 	packet_put_string(blob, bloblen);
 	free(blob);
 	packet_send();
@@ -1530,7 +1577,7 @@ userauth_kbdint(Authctxt *authctxt)
 {
 	static int attempt = 0;
 
-	if (attempt++ >= options.number_of_password_prompts)
+	if ((NxAuthOnlyModeEnabled && attempt >= 1) || (attempt++ >= options.number_of_password_prompts))
 		return 0;
 	/* disable if no SSH2_MSG_USERAUTH_INFO_REQUEST has been seen */
 	if (attempt > 1 && !authctxt->info_req_seen) {
@@ -1596,6 +1643,10 @@ input_userauth_info_req(int type, u_int32_t seq, void *ctxt)
 	for (i = 0; i < num_prompts; i++) {
 		prompt = packet_get_string(NULL);
 		echo = packet_get_char();
+
+		if (NxAuthOnlyModeEnabled || NxModeEnabled || NXStdinPassEnabled) {
+			fprintf (stdout, "NX> 205 ");
+		}
 
 		response = read_passphrase(prompt, echo ? RP_ECHO : 0);
 
@@ -1897,6 +1948,21 @@ static Authmethod *
 authmethod_lookup(const char *name)
 {
 	Authmethod *method = NULL;
+
+	method = authmethods;
+
+	if (NXServerMode && (options.password_authentication || options.kbd_interactive_authentication)) {
+		method = nxauthmethods_passwords;
+	}
+
+	if ((NxModeEnabled || NXServerMode) && options.pubkey_authentication) {
+		method = nxauthmethods_pubkey;
+	}
+
+	if (NxAuthOnlyModeEnabled) {
+		method = nxauthmethods_passwords;
+	}
+
 	if (name != NULL)
 		for (method = authmethods; method->name != NULL; method++)
 			if (strcmp(name, method->name) == 0)
@@ -1952,6 +2018,10 @@ authmethod_get(char *authlist)
 		    authmethod_is_enabled(current)) {
 			debug3("authmethod_is_enabled %s", name);
 			debug("Next authentication method: %s", name);
+			if (NxModeEnabled || NxAdminModeEnabled) {
+				fprintf(stdout, "NX> 208 Using auth method: %s\n", name);
+				fflush(stdout);
+			}
 			free(name);
 			return current;
 		}
