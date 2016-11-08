@@ -2381,9 +2381,19 @@ ssh_packet_set_tos(struct ssh *ssh, int tos)
 void
 ssh_packet_set_interactive(struct ssh *ssh, int interactive, int qos_interactive, int qos_bulk)
 {
+	/*
+	* It's unclear to me why connection is not marked as
+	* interactive when starting a plain shell. The inter-
+	* active flag seems to be triggered only when either
+	* SSH is opening a pseudo TTY or when X11 forwarding
+	* is enabled.
+	*/
 
 	debug("NX> 286 Called packet_set_interactive() for fd: %d interactive is: %d",
 		ssh->state->connection_in, interactive);
+
+	interactive = 1;
+
 	debug("NX> 286 Forcing interactive to: %d for fd: %d",
 		interactive, ssh->state->connection_in);
 
