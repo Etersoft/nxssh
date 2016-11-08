@@ -1781,7 +1781,7 @@ channel_handle_rfd(Channel *c, fd_set *readset, fd_set *writeset)
 		#endif
 
 		if (len < 0 && (errno == EINTR ||
-		    ((errno == EAGAIN || errno == EWOULDBLOCK) && !force)))
+		    ((errno == EAGAIN || errno == EWOULDBLOCK))))
 			return 1;
 #ifndef PTY_ZEROREAD
 		if (len <= 0) {
