@@ -83,6 +83,13 @@
 #include "authfd.h"
 #include "pathnames.h"
 
+/*
+ * Include the NX specific functions and
+ * definitions.
+ */
+
+#include "proxy.h"
+
 #define PANIC
 #define WARNING
 #undef  TEST
@@ -387,6 +394,11 @@ channel_new(char *ctype, int type, int rfd, int wfd, int efd,
 	c->mux_pause = 0;
 	c->delayed = 1;		/* prevent call to channel_post handler */
 	TAILQ_INIT(&c->status_confirms);
+	/*
+	* Initialize the NX members.
+	*/
+
+	buffer_init(&c->nx_buffer);
 	debug("channel %d: new [%s]", found, remote_name);
 	return c;
 }
@@ -499,6 +511,10 @@ channel_free(Channel *c)
 	buffer_free(&c->input);
 	buffer_free(&c->output);
 	buffer_free(&c->extended);
+	/*
+	* Free the NX members.
+	*/
+	buffer_free(&c->nx_buffer);
 	free(c->remote_name);
 	c->remote_name = NULL;
 	free(c->path);

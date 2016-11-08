@@ -164,6 +164,13 @@ struct Channel {
 	void			*mux_ctx;
 	int			mux_pause;
 	int     		mux_downstream_id;
+
+	/*
+	* Enqueue data read from the local side
+	* to intercept the switch command.
+	*/
+
+	Buffer nx_buffer;
 };
 
 #define CHAN_EXTENDED_IGNORE		0
@@ -275,6 +282,7 @@ void	 channel_update_permitted_opens(int, int);
 void	 channel_clear_permitted_opens(void);
 void	 channel_clear_adm_permitted_opens(void);
 void 	 channel_print_adm_permitted_opens(void);
+int      channel_input_port_forward_request(int, struct ForwardOptions *);
 Channel	*channel_connect_to_port(const char *, u_short, char *, char *, int *,
 	     const char **);
 Channel *channel_connect_to_path(const char *, char *, char *);
