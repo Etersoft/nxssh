@@ -1846,8 +1846,15 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 		exit_status = 0;
 	}
 
-	if (received_signal)
-		fatal("Killed by signal %d.", (int) received_signal);
+	if (received_signal) {
+		/*
+		* fatal("Killed by signal %d.", (int) received_signal);
+		*/
+
+		nx_close_proxy_connection();
+
+		fatal("NX> 280 Exiting on signal: %d", (int) received_signal);
+	}
 
 	/*
 	 * In interactive mode (with pseudo tty) display a message indicating
@@ -1915,6 +1922,12 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 	if (total_time > 0)
 		verbose("Bytes per second: sent %.1f, received %.1f",
 		    obytes / total_time, ibytes / total_time);
+
+	/*
+	* Wait for the NX transport to terminate.
+	*/
+	nx_close_proxy_connection();
+
 	/* Return the exit status of the program. */
 	debug("Exit status %d", exit_status);
 	return exit_status;
