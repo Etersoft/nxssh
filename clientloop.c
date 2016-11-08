@@ -113,6 +113,12 @@
 #include "ssherr.h"
 #include "hostfile.h"
 
+/*
+ * Used in NX network related functions.
+ */
+
+#include "NX.h"
+#include "proxy.h"
 
 /*
  * Set here the requested log level.
@@ -713,7 +719,7 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		tvp = &tv;
 	}
 
-	ret = select((*maxfdp)+1, *readsetp, *writesetp, NULL, tvp);
+	ret = nx_proxy_select((*maxfdp)+1, *readsetp, *writesetp, NULL, tvp);
 	if (ret < 0) {
 		char buf[100];
 

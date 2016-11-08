@@ -92,6 +92,17 @@
 #define DBG(x)
 #endif
 
+/*
+ * Used in NX network related functions.
+ */
+
+#include "NX.h"
+#include "proxy.h"
+
+/*
+ * Set here the requested log level.
+ */
+
 #define PANIC
 #define WARNING
 #undef  TEST
@@ -1462,8 +1473,7 @@ ssh_packet_read_seqnr(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 				ms_to_timeval(&timeout, ms_remain);
 				gettimeofday(&start, NULL);
 			}
-			if ((r = select(state->connection_in + 1, setp,
-			    NULL, NULL, timeoutp)) >= 0)
+			if ((r = nx_proxy_select(state->connection_in + 1, setp, NULL, NULL, NULL)) >= 0)
 				break;
 			if (errno != EAGAIN && errno != EINTR &&
 			    errno != EWOULDBLOCK)
@@ -2290,8 +2300,7 @@ ssh_packet_write_wait(struct ssh *ssh)
 				ms_to_timeval(&timeout, ms_remain);
 				gettimeofday(&start, NULL);
 			}
-			if ((ret = select(state->connection_out + 1,
-			    NULL, setp, NULL, timeoutp)) >= 0)
+			if ((ret = nx_proxy_select(state->connection_out + 1, NULL, setp, NULL, NULL)) >= 0)
 				break;
 			if (errno != EAGAIN && errno != EINTR &&
 			    errno != EWOULDBLOCK)
