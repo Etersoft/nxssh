@@ -1227,6 +1227,10 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 	switch (host_status) {
 	case HOST_OK:
 		/* The host is known and the key matches. */
+		if(options.hostkeyadd == 1) {
+			exit(0);
+		}
+
 		debug("Host '%.200s' is known and matches the %s host %s.",
 		    host, type, want_cert ? "certificate" : "key");
 		debug("Found %s in %s:%lu", want_cert ? "CA key" : "key",
@@ -1275,6 +1279,9 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 		if (readonly || want_cert)
 			goto fail;
 		/* The host is new. */
+		if(options.hostkeyadd == 1) {
+			error(":Host %.200s is added to know hosts", host);
+		}
 		if (options.strict_host_key_checking == 1) {
 			/*
 			 * User has requested strict host key checking.  We
@@ -1358,6 +1365,8 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 		else
 			logit("Warning: Permanently added '%.200s' (%s) to the "
 			    "list of known hosts.", hostp, type);
+		if(options.hostkeyadd == 1)
+			exit(0);
 		break;
 	case HOST_REVOKED:
 		error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
@@ -1379,6 +1388,21 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 		goto continue_unsafe;
 
 	case HOST_CHANGED:
+		if(options.hostkeyadd == 1) {
+            if (options.check_host_ip && ip_status == HOST_NEW) {
+                snprintf(hostline, sizeof(hostline), "%s,%s", host, ip);
+                hostp = hostline;
+            } else
+                hostp = host;
+
+            if (!add_host_to_hostfile(user_hostfiles[0], hostp, host_key, options.hash_known_hosts))
+                logit("Failed to add the host to the list of known "
+                    "hosts (%.500s).", user_hostfiles[0]);
+            else
+                logit("Warning: Permanently added '%.200s' (%s) to the "
+                    "list of known hosts.", hostp, type);
+            exit(0);
+        }
 		if (want_cert) {
 			/*
 			 * This is only a debug() since it is valid to have
@@ -1708,12 +1732,16 @@ ssh_login(Sensitive *sensitive, const char *orighost,
 	debug("Authenticating to %s:%d as '%s'", host, port, server_user);
 	if (compat20) {
 		ssh_kex2(host, hostaddr, port);
+		if(options.onlycheck == 1)
+			exit(0);
 		if (NxModeEnabled)
 			logit("NX> 202 Authenticating user: %.200s", server_user);
 		ssh_userauth2(local_user, server_user, host, sensitive);
 	} else {
 #ifdef WITH_SSH1
 		ssh_kex(host, hostaddr);
+		if(options.onlycheck == 1)
+			exit(0);
 		if (NxModeEnabled)
 			logit("NX> 202 Authenticating user: %.200s", server_user);
 		ssh_userauth1(local_user, server_user, host, sensitive);
