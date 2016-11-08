@@ -70,6 +70,8 @@
 #undef  TEST
 #undef  DEBUG
 
+#define HTTP_MAXHDRS    64
+
 char *client_version_string = NULL;
 char *server_version_string = NULL;
 Key *previous_host_key = NULL;
@@ -794,14 +796,27 @@ ssh_connect_direct(const char *host, struct addrinfo *aitop,
 				memcpy(hostaddr, ai->ai_addr, ai->ai_addrlen);
 				break;
 			} else {
-				debug("connect to address %s port %s: %s",
-				    ntop, strport, strerror(errno));
-				close(sock);
-				sock = -1;
+				if (NxAdminModeEnabled) {
+					fprintf(stdout, "NX> 207 nxssh: connect to address %s port %s: %s\n",
+						sockaddr_ntop(ai->ai_addr, ai->ai_addrlen),
+						strport, strerror(errno));
+				} else if (NxAuthOnlyModeEnabled) {
+						fprintf(stdout, "NX> 207 nxssh: connect to address %s port %s: %s",
+							sockaddr_ntop(ai->ai_addr, ai->ai_addrlen),
+							strport, strerror(errno));
+				} else {
+					debug("connect to address %s port %s: %s",
+						ntop, strport, strerror(errno));
+					close(sock);
+					sock = -1;
+				}
 			}
 		}
-		if (sock != -1)
+		if (sock != -1) {
+			if (NxModeEnabled)
+				logit("NX> 200 Connected to address: %.200s on port: %.200s", ntop, strport);
 			break;	/* Successful connection. */
+		}
 	}
 
 	/* Return failure if we didn't get a successful connection. */
@@ -1319,7 +1334,7 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 					    " found in DNS.\n");
 			}
 			snprintf(msg, sizeof(msg),
-			    "The authenticity of host '%.200s (%s)' can't be "
+			    "NX> 211  The authenticity of host '%.200s (%s)' can't be "
 			    "established%s\n"
 			    "%s key fingerprint is %s.%s%s\n%s"
 			    "Are you sure you want to continue connecting "
@@ -1440,6 +1455,9 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 		warn_changed_key(host_key);
 		error("Add correct host key in %.100s to get rid of this message.",
 		    user_hostfiles[0]);
+		if (NxModeEnabled || NxAdminModeEnabled) {
+			error("NX> 209 Remote host identification has changed.");
+		}
 		error("Offending %s key in %s:%lu", key_type(host_found->key),
 		    host_found->file, host_found->line);
 
