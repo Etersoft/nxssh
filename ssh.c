@@ -116,6 +116,13 @@
 #endif
 
 /*
+ * Include the NX specific functions and
+ * definitions.
+ */
+
+#include "proxy.h"
+
+/*
  * Define TEST to get SYSLOG_LEVEL_DEBUG3.
  */
 
@@ -201,19 +208,115 @@ static int remote_forward_confirms_received = 0;
 extern int muxserver_sock;
 extern u_int muxclient_command;
 
+/* NX MODE */
+int NxModeEnabled = 0;
+int NxAuthOnlyModeEnabled = 0;
+int NXStdinPassEnabled = 0;
+int NXServerMode = 0;
+int NxAdminModeEnabled = 0;
+int webproxy_flag = 0;
+
+/*
+patch for offending key under CYGNUS.
+Resolve the problem of the offending key under Windows platforms
+*/
+int deleteLine(FILE *fKnown_hosts, FILE *fTempKnown_hosts,unsigned int raw_to_delete)
+{
+	char ch;
+	int retValue = 0;
+	unsigned int numLine = 1;
+
+	ch = fgetc(fKnown_hosts);
+
+	while( feof(fKnown_hosts) == 0 ) {
+		while(ch != '\n') {
+			if(numLine != raw_to_delete ) {
+				fputc(ch,fTempKnown_hosts);
+			}
+			else {
+				retValue++;
+			}
+			ch = fgetc(fKnown_hosts);
+		}
+
+		if(numLine != raw_to_delete )
+		fputc('\n',fTempKnown_hosts);
+
+		ch = fgetc(fKnown_hosts);
+
+		numLine++;
+	}
+	return retValue;
+}
+
+int deleteOffendingKey(char * file_name , unsigned int raw)
+{
+	int retValue = 0;
+	char tempFile[256];
+
+	FILE * fKnown_hosts = NULL;
+	FILE * fTempKnown_hosts = NULL;
+
+	strcpy(tempFile , file_name);
+	strcat(tempFile , "_temp");
+
+	fKnown_hosts = fopen(file_name , "r");
+	fTempKnown_hosts = fopen(tempFile , "w");
+
+	if(fKnown_hosts == NULL || fTempKnown_hosts == NULL) {
+
+		if(fKnown_hosts != NULL)
+			fclose(fKnown_hosts);
+		else
+			fprintf(stderr , "Error: Cannot remove the key in %s (opened file failed)", file_name);
+
+		if(fTempKnown_hosts != NULL) {
+			fclose(fTempKnown_hosts);
+			remove(tempFile);
+		} else
+			fprintf(stderr , "Error: Cannot create temporary file %s",tempFile);
+
+		retValue = -1;
+	} else {
+		if(deleteLine(fKnown_hosts,fTempKnown_hosts,raw) != 0) {
+			fclose(fKnown_hosts);
+			fclose(fTempKnown_hosts);
+
+			if(remove(file_name) == -1)
+				return -1;
+
+			if(rename(tempFile, file_name) != 0)
+				return -1;
+
+			retValue = 0;
+		} else {
+		fclose(fKnown_hosts);
+		fclose(fTempKnown_hosts);
+
+		if(remove(tempFile) == -1)
+			return -1;
+		fprintf(stderr , "Error: Cannot find the line %d in %s\n",raw,file_name);
+		}
+	}
+	return retValue;
+}
+
 /* Prints a help message to the user.  This function never returns. */
 
 static void
 usage(void)
 {
 	fprintf(stderr,
-"usage: ssh [-1246AaCfGgKkMNnqsTtVvXxYy] [-b bind_address] [-c cipher_spec]\n"
-"           [-D [bind_address:]port] [-E log_file] [-e escape_char]\n"
-"           [-F configfile] [-I pkcs11] [-i identity_file]\n"
-"           [-J [user@]host[:port]] [-L address] [-l login_name] [-m mac_spec]\n"
-"           [-O ctl_cmd] [-o option] [-p port] [-Q query_option] [-R address]\n"
-"           [-S ctl_path] [-W host:port] [-w local_tun[:remote_tun]]\n"
-"           [user@]hostname [command]\n"
+"usage: nxssh [-nx|-nxservermode|-nxadminmode|-nxauthonly|-nxstdinpass]\n"
+"             [-delkey known_hosts row] [-BE] [-1246AaCfgkMNnqsTtVvXxY]\n"
+"             [-b bind_address] [-c cipher_spec]\n"
+"             [-D [bind_address:]port] [-E log_file] [-e escape_char]\n"
+"             [-F configfile] [-I pkcs11] [-i identity_file]\n"
+"             [-J [user@]host[:port]] [-L address] [-l login_name] [-m mac_spec]\n"
+"             [-O ctl_cmd] [-o option] [-p port] [-Q query_option] [-R address]\n"
+"             [-P [proxy_user:proxy_password@]proxy_hostname:proxy_port]\n"
+"             [-S ctl_path] [-W host:port] [-w local_tun[:remote_tun]]\n"
+"             [user@]hostname [command]\n"
 	);
 	exit(255);
 }
@@ -522,6 +625,10 @@ main(int ac, char **av)
 	struct ssh *ssh = NULL;
 	int i, r, opt, exit_status, use_syslog, direct, config_test = 0;
 	char *p, *cp, *line, *argv0, buf[PATH_MAX], *host_arg, *logfile;
+	u_short webproxy_port = 0;
+	char swebproxy_port[6];
+	char webproxy_host[256];
+	char webproxy_username[256] = "", webproxy_passwd[256] = "";
 	char thishost[NI_MAXHOST], shorthost[NI_MAXHOST], portstr[NI_MAXSERV];
 	char cname[NI_MAXHOST], uidstr[32], *conn_hash_hex;
 	struct stat st;
@@ -533,6 +640,48 @@ main(int ac, char **av)
 	struct addrinfo *addrs = NULL;
 	struct ssh_digest_ctx *md;
 	u_char conn_hash[SSH_DIGEST_MAX_LENGTH];
+
+	int nx_skip_config_file = 0;
+
+	if(ac > 1 && strcmp( av[1], "-nxstdinpass" ) == 0 ) {
+		NXStdinPassEnabled = 1;
+		av[1] = "-T";
+	} else {
+		NXStdinPassEnabled = 0;
+	}
+
+	if(ac > 1 && strcmp( av[1], "-nxservermode" ) == 0 ) {
+		NXStdinPassEnabled = 1;
+		NXServerMode = 1;
+		av[1] = "-T";
+	}
+
+	if (ac > 1 && strcmp( av[1], "-nxauthonly" ) == 0 ) {
+		NxAuthOnlyModeEnabled = 1;
+		av[1] = "-T";
+	} else {
+		NxAuthOnlyModeEnabled = 0;
+	}
+
+	if (ac > 1 && strcmp( av[1], "-nx" ) == 0 ) {
+		NxModeEnabled = 1;
+		av[1] = "-T";
+	} else {
+		NxModeEnabled = 0;
+	}
+
+	if (ac > 1 && strcmp( av[1], "-nxadminmode" ) == 0 ) {
+		NxAdminModeEnabled = 1;
+		av[1] = "-T";
+	}
+
+	if ((ac > 1 ) && (strcmp(av[1],"-delkey")==0) ) {
+		if (av[2] && av[3]) {
+				exit(deleteOffendingKey(av[2] , atoi(av[3])));
+		} else {
+				usage();
+		}
+	}
 
 	if (NxModeEnabled) {
 			logit("NX> 203 NXSSH running with pid: %d", getpid());
@@ -619,7 +768,7 @@ main(int ac, char **av)
 
  again:
 	while ((opt = getopt(ac, av, "1246ab:c:e:fgi:kl:m:no:p:qstvx"
-	    "ACD:E:F:GI:J:KL:MNO:PQ:R:S:TVw:W:XYy")) != -1) {
+	    "ACD:E:F:GI:J:KL:MNO:PQ:R:S:TVw:W:XYBEy")) != -1) {
 		switch (opt) {
 		case '1':
 			options.protocol = SSH_PROTO_1;
@@ -683,9 +832,9 @@ main(int ac, char **av)
 			else
 				fatal("Invalid multiplex command.");
 			break;
-		case 'P':	/* deprecated */
-			options.use_privileged_port = 0;
-			break;
+		// case 'P':	/* deprecated */
+		// 	options.use_privileged_port = 0;
+		// 	break;
 		case 'Q':
 			cp = NULL;
 			if (strcmp(optarg, "cipher") == 0)
@@ -944,6 +1093,57 @@ main(int ac, char **av)
 		case 'F':
 			config = optarg;
 			break;
+		case 'P':
+			if (sscanf(optarg, "%255[^:]:%5[0123456789]",
+					webproxy_host, swebproxy_port) != 2) {
+				if (sscanf(optarg, "%255[^:]:%255[^@]@%255[^:]:%5[0123456789]",
+						webproxy_username, webproxy_passwd,
+						webproxy_host, swebproxy_port) != 4) {
+					fprintf(stderr, "Bad web proxy specification '%s'\n", optarg);
+					usage();
+				}
+			}
+			if ((webproxy_port = a2port(swebproxy_port)) == 0) {
+				fprintf(stderr, "Bad web proxy port '%s'\n", optarg);
+				exit(255);
+			}
+			webproxy_flag = 1;
+			break;
+
+		case 'B':
+			/*
+			* This option is used in NX to specify that nxssh
+			* must forward the traffic to a proxy connection.
+			*
+			* There are two ways nxssh can operate when the -B
+			* option is given:
+			*
+			* . If no remote host is specified, nxssh will wait
+			*   for the command on its standard input without
+			*   connecting to a remote host.
+			*
+			* . When a host is specified, nxssh will buffer any
+			*   incoming data and monitor the channel until the
+			*   command is read. It will then remove the command
+			*   and switch the channel descriptors to forward
+			*   the proxy connection.
+			*
+			*/
+
+			logit("NX> 285 Enabling check on switch command");
+
+			nx_check_switch = 1;
+			break;
+		case 'E':
+			/*
+			*  This option is used in NX to specify that nxssh
+			*  must ignore any configuration file.
+			*/
+
+			logit("NX> 285 Enabling skip of SSH config files");
+
+			nx_skip_config_file = 1;
+			break;
 		default:
 			usage();
 		}
@@ -1032,8 +1232,10 @@ main(int ac, char **av)
 #endif
 		);
 
-	/* Parse the configuration files */
-	process_config_files(host_arg, pw, 0);
+	if (!nx_skip_config_file) {
+		/* Parse the configuration files */
+		process_config_files(host_arg, pw, 0);
+	}
 
 	/* Hostname canonicalisation needs a few options filled. */
 	fill_default_options_for_canonicalization(&options);
@@ -1277,12 +1479,25 @@ main(int ac, char **av)
 	timeout_ms = options.connection_timeout * 1000;
 
 	/* Open a connection to the remote host. */
-	if (ssh_connect(host, addrs, &hostaddr, options.port,
-	    options.address_family, options.connection_attempts,
-	    &timeout_ms, options.tcp_keep_alive,
-	    options.use_privileged_port) != 0)
- 		exit(255);
-
+	if (webproxy_flag) {
+		if (ssh_webproxy_connect(webproxy_host, webproxy_port,webproxy_username, webproxy_passwd,
+		host, &hostaddr, options.port, options.address_family, options.connection_attempts,
+		#ifdef HAVE_CYGWIN
+		options.use_privileged_port
+		#else
+		original_effective_uid == 0 && options.use_privileged_port
+		#endif
+		) != 0)
+		{
+			exit(255);
+		}
+	} else {
+		if (ssh_connect(host, addrs, &hostaddr, options.port,
+			options.address_family, options.connection_attempts,
+			&timeout_ms, options.tcp_keep_alive,
+			options.use_privileged_port) != 0)
+			exit(255);
+	}
 	if (addrs != NULL)
 		freeaddrinfo(addrs);
 
