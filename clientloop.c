@@ -113,6 +113,16 @@
 #include "ssherr.h"
 #include "hostfile.h"
 
+
+/*
+ * Set here the requested log level.
+ */
+
+#define PANIC
+#define WARNING
+#undef  TEST
+#undef  DEBUG
+
 /* import options */
 extern Options options;
 

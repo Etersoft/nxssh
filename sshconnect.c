@@ -65,6 +65,11 @@
 #include "ssherr.h"
 #include "authfd.h"
 
+#define PANIC
+#define WARNING
+#undef  TEST
+#undef  DEBUG
+
 char *client_version_string = NULL;
 char *server_version_string = NULL;
 Key *previous_host_key = NULL;

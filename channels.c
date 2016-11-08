@@ -83,6 +83,11 @@
 #include "authfd.h"
 #include "pathnames.h"
 
+#define PANIC
+#define WARNING
+#undef  TEST
+#undef  DEBUG
+
 /* -- channel core */
 
 /*

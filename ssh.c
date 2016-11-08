@@ -115,6 +115,15 @@
 #include "ssh-pkcs11.h"
 #endif
 
+/*
+ * Define TEST to get SYSLOG_LEVEL_DEBUG3.
+ */
+
+#define PANIC
+#define WARNING
+#undef  TEST
+#undef  DEBUG
+
 extern char *__progname;
 
 /* Saves a copy of argv for setproctitle emulation */

@@ -92,6 +92,11 @@
 #define DBG(x)
 #endif
 
+#define PANIC
+#define WARNING
+#undef  TEST
+#undef  DEBUG
+
 #define PACKET_MAX_SIZE (256 * 1024)
 
 struct packet_state {
