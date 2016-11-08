@@ -1760,12 +1760,20 @@ channel_handle_rfd(Channel *c, fd_set *readset, fd_set *writeset)
 	force = c->isatty && c->detach_close && c->istate != CHAN_INPUT_CLOSED;
 	if (c->rfd != -1 && (force || FD_ISSET(c->rfd, readset))) {
 		errno = 0;
-		len = read(c->rfd, buf, sizeof(buf));
+
+		/*
+		* To print the content of the buffer need
+		* to ensure that it is null-terminated.
+		*/
+
+		buf[sizeof(buf) - 1] = '\0';
+
 		#ifdef TEST
 		logit("NX> 280 Reading: %u bytes from fd: %d in context: 4",
 			sizeof(buf) - 1, c->rfd);
 		#endif
 
+		len = read(c->rfd, buf, sizeof(buf) - 1);
 
 		#ifdef TEST
 		logit("NX> 280 Read: %d bytes error: %d in context: 4",
@@ -1796,15 +1804,41 @@ channel_handle_rfd(Channel *c, fd_set *readset, fd_set *writeset)
 			}
 			return -1;
 		}
-		if (c->input_filter != NULL) {
-			if (c->input_filter(c, buf, len) == -1) {
-				debug2("channel %d: filter stops", c->self);
-				chan_read_failed(c);
+
+		/*
+		* Append input to the buffer and then search for the NX
+		* command. Can modify both buffer and length in order to
+		* return more data if there were intermediate newlines.
+		*/
+
+		if (nx_check_switch)
+		{
+				/*
+					* If the command is found it will set the variable
+					* nx_switch_received and the host, the port and the
+					* other parameters read from command. The switch is
+					* later performed in channel_post_open().
+					*/
+
+				nx_check_channel_input(c, buf, &len, sizeof(buf) - 1);
+		}
+
+		/*
+		* Can be that no data was left in the buffer.
+		*/
+
+		if (len)
+		{
+			if (c->input_filter != NULL) {
+				if (c->input_filter(c, buf, len) == -1) {
+					debug("channel %d: filter stops", c->self);
+					chan_read_failed(c);
+				}
+			} else if (c->datagram) {
+				buffer_put_string(&c->input, buf, len);
+			} else {
+				buffer_append(&c->input, buf, len);
 			}
-		} else if (c->datagram) {
-			buffer_put_string(&c->input, buf, len);
-		} else {
-			buffer_append(&c->input, buf, len);
 		}
 	}
 	return 1;
@@ -1867,13 +1901,13 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 			dlen, c->wfd);
 		#endif
 
+		len = write(c->wfd, data, dlen);
 
 		#ifdef TEST
 		logit("NX> 280 Written: %d bytes error: %d in context: 5",
 			len, (len < 0 ? errno : 0));
 		#endif
 
-		len = write(c->wfd, buf, dlen);
 		if (len < 0 &&
 		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK))
 			return 1;
