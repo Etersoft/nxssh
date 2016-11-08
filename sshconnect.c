@@ -91,6 +91,17 @@ extern uid_t original_effective_uid;
 static int show_other_keys(struct hostkeys *, Key *);
 static void warn_changed_key(Key *);
 
+static const char *
+sockaddr_ntop(struct sockaddr *sa, socklen_t salen)
+{
+	static char addrbuf[NI_MAXHOST];
+
+	if (getnameinfo(sa, salen, addrbuf, sizeof(addrbuf), NULL, 0,
+			NI_NUMERICHOST) != 0)
+			fatal("sockaddr_ntop: getnameinfo NI_NUMERICHOST failed");
+	return addrbuf;
+}
+
 /* Expand a proxy command */
 static char *
 expand_proxy_command(const char *proxy_command, const char *user,
@@ -418,6 +429,309 @@ timeout_connect(int sockfd, const struct sockaddr *serv_addr,
 	}
 
 	return (result);
+}
+
+int
+ssh_webproxy_connect(const char *proxy_host, u_short proxy_port, const char *proxy_username,
+                          const char *proxy_passwd, const char *host, struct sockaddr_storage * hostaddr,
+                          u_short port, int family, int connection_attempts, int needpriv)
+{
+        int gaierr;
+        int on = 1;
+        int sock = -1, attempt;
+        char ntop[NI_MAXHOST], strport[NI_MAXSERV];
+        struct addrinfo hints, *ai, *aitop;
+        struct servent *sp;
+
+        char readbuf[1024];
+        char writebuf[1024];
+
+        fd_set fds;
+        struct timeval tv;
+        int sel_ret;
+
+        int i,r;
+
+        /*
+         * Did we get only other errors than "Connection refused" (which
+         * should block fallback to rsh and similar), or did we get at least
+         * one "Connection refused"?
+         */
+        int full_failure = 1;
+
+        debug2("ssh_webproxy_connect: needpriv %d", needpriv);
+
+        /* Get default port if port has not been set. */
+        if (proxy_port == 0)
+        {
+                proxy_port = 3128;
+        }
+        if (port == 0)
+        {
+                sp = getservbyname(SSH_SERVICE_NAME, "tcp");
+                if (sp)
+                {
+                        port = ntohs(sp->s_port);
+                }
+                else
+                {
+                        port = SSH_DEFAULT_PORT;
+                }
+        }
+
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = family;
+        hints.ai_socktype = SOCK_STREAM;
+        snprintf(strport, sizeof strport, "%u", proxy_port);
+
+        if ((gaierr = getaddrinfo(proxy_host, strport, &hints, &aitop)) != 0) {
+                if (NxAdminModeEnabled)
+                {
+                        fprintf(stdout, "NX> 207 %s: %.100s: %s\n", __progname, proxy_host,
+                                    gai_strerror(gaierr));
+                        fatal("%s: %.100s: %s", __progname, proxy_host,
+                                  gai_strerror(gaierr));
+                }
+                else if (NxAuthOnlyModeEnabled)
+                {
+                        fatal("NX> 207 %s: %.100s: %s", __progname, proxy_host,
+                                  gai_strerror(gaierr));
+                }
+                else
+                {
+                        fatal("%s: %.100s: %s", __progname, proxy_host,
+                                  gai_strerror(gaierr));
+                }
+        }
+
+        /*
+        * Try to connect several times.  On some machines, the first time
+        * will sometimes fail.  In general socket code appears to behave
+        * quite magically on many machines.
+        */
+        for (attempt = 0; ;)
+        {
+                if (attempt > 0)
+                {
+                        debug("Trying again...");
+                }
+
+                /* Loop through addresses for this host, and try each one in
+                sequence until the connection succeeds. */
+                for (ai = aitop; ai; ai = ai->ai_next)
+                {
+                        if (ai->ai_family != AF_INET && ai->ai_family != AF_INET6)
+                        {
+                                continue;
+                        }
+                        if (getnameinfo(ai->ai_addr, ai->ai_addrlen,
+                                ntop, sizeof(ntop), strport, sizeof(strport),
+                                    NI_NUMERICHOST|NI_NUMERICSERV) != 0)
+                        {
+                                error("ssh_connect: getnameinfo failed");
+                                continue;
+                        }
+                        debug("Connecting to web proxy %.200s [%.100s] port %s.",
+                                  proxy_host, ntop, strport);
+
+                        /* Create a socket for connecting. */
+                        sock = ssh_create_socket(needpriv, ai);
+                        if (sock < 0)
+                        {
+                                /* Any error is already output */
+                                continue;
+                        }
+
+                        if (timeout_connect(sock, ai->ai_addr, ai->ai_addrlen,
+                                options.connection_timeout) >= 0)
+                        {
+                                /* Successful connection. */
+                                memcpy(hostaddr, ai->ai_addr, ai->ai_addrlen);
+                                break;
+                        }
+                        else
+                        {
+                                if (errno == ECONNREFUSED)
+                                {
+                                        full_failure = 0;
+                                }
+
+                                if (NxAdminModeEnabled)
+                                {
+                                        fprintf(stdout, "NX> 207 nxssh: connect to address %s port %s: %s\n",
+                                                    sockaddr_ntop(ai->ai_addr, ai->ai_addrlen),
+                                                        strport, strerror(errno));
+                                }
+                                else if (NxAuthOnlyModeEnabled)
+                                {
+                                        fprintf(stdout, "NX> 207 nxssh: connect to address %s port %s: %s",
+                                                    sockaddr_ntop(ai->ai_addr, ai->ai_addrlen),
+                                                        strport, strerror(errno));
+                                }
+                                else
+                                {
+                                        debug("connect to address %s port %s: %s",
+                                                  ntop, strport, strerror(errno));
+                                }
+                                /*
+                                * Close the failed socket; there appear to
+                                * be some problems when reusing a socket for
+                                * which connect() has already returned an
+                                * error.
+                                */
+                                close(sock);
+                        }
+                }
+                if (ai)
+                {
+                        if (NxModeEnabled)
+                        {
+                                logit("NX> 200 Connected to web proxy at address: %.200s on port: %.200s", ntop, strport);
+                        }
+                        break;	/* Successful connection. */
+                }
+
+                attempt++;
+                if (attempt >= connection_attempts)
+                {
+                        break;
+                }
+                /* Sleep a moment before retrying. */
+                sleep(1);
+        }
+
+        freeaddrinfo(aitop);
+
+        /* Return failure if we didn't get a successful connection. */
+        if (attempt >= connection_attempts)
+        {
+                logit("ssh: connect to host %s port %s: %s",
+                          proxy_host, strport, strerror(errno));
+                return full_failure ? ECONNABORTED : ECONNREFUSED;
+        }
+
+        debug("Connection to web proxy established.");
+
+        #ifdef TEST
+        logit("NX> 280 SSH connection established with fd: %d",
+                  sock);
+        #endif
+
+        /* Set SO_KEEPALIVE if requested. */
+        if (options.tcp_keep_alive &&
+                setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&on,
+                    sizeof(on)) < 0)
+        {
+                error("setsockopt SO_KEEPALIVE: %.100s", strerror(errno));
+        }
+
+        if (strcspn(host, "\r\n\t []:") != strlen(host))
+        {
+                fatal("ssh_webproxy_connect: invalid hostname %.100s", host);
+        }
+
+        if (strchr(host, ':') != NULL)
+        {
+                r = snprintf(writebuf, sizeof(writebuf),
+                                 "CONNECT [%s]:%u HTTP/1.0\r\n",
+                                     host, port);
+        }
+        else
+        {
+                r = snprintf(writebuf, sizeof(writebuf),
+                                 "CONNECT %s:%u HTTP/1.0\r\n",
+                                     host, port);
+        }
+        if (r == -1 || (size_t)r >= sizeof(writebuf))
+        {
+                fatal("ssh_webproxy_connect: hostname too long %.100s", host);
+        }
+        debug("ssh_webproxy_connect: write %.100s", writebuf);
+
+        write(sock, writebuf, strlen(writebuf));
+
+        if(strlen(proxy_username) && strlen(proxy_passwd))
+        {
+                char encodedUsrNamePasswd[1024]="";
+                char usrNamePasswd[1024];
+                snprintf(usrNamePasswd, sizeof(usrNamePasswd),
+                             "%s:%s", proxy_username, proxy_passwd);
+
+                uuencode(usrNamePasswd, strlen(usrNamePasswd),
+                             encodedUsrNamePasswd, 1024);
+
+                r = snprintf(writebuf, sizeof(writebuf),
+                                 "Proxy-Authorization: Basic %s\r\n\r\n",
+                                 encodedUsrNamePasswd);
+        }
+        else
+        {
+                r = snprintf(writebuf, sizeof(writebuf), "\r\n");
+        }
+
+        if (r == -1 || (size_t)r >= sizeof(writebuf))
+        {
+                fatal("ssh_webproxy_connect: username and password too long %.100s",
+                           proxy_username);
+        }
+        debug("ssh_webproxy_connect: write %.100s", writebuf);
+
+        write(sock, writebuf, strlen(writebuf));
+
+        FD_ZERO(&fds);
+        FD_SET(sock,&fds);
+        tv.tv_sec = 30;
+        tv.tv_usec = 0;
+
+        /* Read proxy repsonse. */
+        for (r = 0; r < HTTP_MAXHDRS; r++)
+        {
+                sel_ret = select(sock+1, &fds, NULL, NULL, &tv);
+
+                if(sel_ret==0)
+                {
+                        exit(1);
+                }
+
+                for (i = 0; i < sizeof(readbuf) - 1; i++)
+                {
+                        int len = read(sock, &readbuf[i], 1);
+                        if (len < 0)
+                        {
+                                fatal("web proxy handshaking: read: %.100s", strerror(errno));
+                        }
+                        if (len != 1)
+                        {
+                                fatal("web proxy handshaking: Connection closed by remote host");
+                        }
+
+                        if (readbuf[i] == '\r')
+                        {
+                                continue;		/**XXX wait for \n */
+                        }
+                        if (readbuf[i] == '\n')
+                        {
+                                readbuf[i] = 0;
+                                break;
+                        }
+                }
+                debug("ssh_webproxy_connect: read %.100s", readbuf);
+                if (r == 0 && strncmp(readbuf, "HTTP/1.0 200 ", 13) != 0 &&
+                        strncmp(readbuf, "HTTP/1.1 200 ", 13) != 0)
+                {
+                        fatal("web proxy handshaking: proxy error: %.100s", readbuf);
+                }
+                if (*readbuf == '\0' || *readbuf == '\r')
+                {
+                        break;
+                }
+        }
+
+
+        /* Set the connection. */
+        packet_set_connection(sock, sock);
+
+        return 0;
 }
 
 /*
@@ -783,7 +1097,7 @@ get_hostfile_hostname_ipaddr(char *hostname, struct sockaddr *hostaddr,
 	 * using a proxy command
 	 */
 	if (hostfile_ipaddr != NULL) {
-		if (options.proxy_command == NULL) {
+		if (options.proxy_command == NULL && webproxy_flag == 0) {
 			if (getnameinfo(hostaddr, addrlen,
 			    ntop, sizeof(ntop), NULL, 0, NI_NUMERICHOST) != 0)
 			fatal("%s: getnameinfo failed", __func__);
