@@ -1183,9 +1183,70 @@ main(int ac, char **av)
 		ac--, av++;
 	}
 
+	#ifdef TEST
+	options.log_level = SYSLOG_LEVEL_DEBUG3;
+	#endif
+
+	/*
+	* Force our preferred options if this is a NX session.
+	* Be sure that the pseudo-tty is not allocated and that
+	* parsing of the escape characters is disabled, then
+	* turn off compression and request the X11 forwarding.
+	* The X11 forwarding is not used by NX, but if we don't
+	* request it, SSHD will not consider the session inter-
+	* active and will unilaterally turn on the Nagle algo-
+	* rithm on the remote socket.
+	*/
+
+	if (nx_check_switch == 1) {
+		logit("NX> 285 Setting the preferred NX options");
+
+		tty_flag    = 0;
+		no_tty_flag = 1;
+
+		options.escape_char = SSH_ESCAPECHAR_NONE;
+
+		options.compression = 0;
+		options.forward_x11 = 1;
+
+		/*
+			* Set the display to a fake
+			* value if not set.
+			*/
+
+		if (nx_get_environment("DISPLAY") == NULL) {
+				nx_set_environment("DISPLAY", "");
+		}
+	}
+
 	/* Check that we got a host name. */
-	if (!host)
+	if (!host) {
+		/*
+		* If we didn't get a host and monitoring of the
+		* switch command is ebabled enter a restricted
+		* loop where we will wait for the command from
+		* standard input without connecting to a remote
+		* SSH server.
+		*
+		* After the switch, data read from input will be
+		* forwarded to the proxy connection and data
+		* coming from proxy will be written to the stand-
+		* ard output.
+		*/
+
+		if (nx_check_switch) {
+			for (;;) {
+				if (nx_switch_received) {
+						nx_switch_server_side_descriptors();
+						exit(0);
+				}
+
+				nx_check_standard_input();
+			}
+		}
+
 		usage();
+	}
 
 	host_arg = xstrdup(host);
 
