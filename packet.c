@@ -2421,6 +2421,15 @@ ssh_packet_set_interactive(struct ssh *ssh, int interactive, int qos_interactive
 	set_nodelay(state->connection_in);
 	ssh_packet_set_tos(ssh, interactive ? qos_interactive :
 	    qos_bulk);
+
+	/*
+	* Set any additional NX option on
+	* the socket.
+	*/
+
+	if (NxModeEnabled == 1) {
+		nx_set_socket_options(state->connection_in, 0);
+	}
 }
 
 /* Returns true if the current connection is interactive. */
