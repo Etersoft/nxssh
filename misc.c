@@ -148,11 +148,13 @@ set_nodelay(int fd)
 		return;
 	}
 	if (opt == 1) {
+		debug("NX> 286 SSH reports TCP_NODELAY already set on descriptor: %d", fd);
 		debug2("fd %d is TCP_NODELAY", fd);
 		return;
 	}
 	opt = 1;
 	debug2("fd %d setting TCP_NODELAY", fd);
+	debug("NX> 286 SSH is setting TCP_NODELAY on descriptor: %d", fd);
 	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof opt) == -1)
 		error("setsockopt TCP_NODELAY: %.100s", strerror(errno));
 }

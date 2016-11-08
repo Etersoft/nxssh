@@ -424,6 +424,9 @@ client_x11_get_proto(const char *display, const char *xauth_path,
 				got_data = 1;
 			if (f)
 				pclose(f);
+		} else {
+			debug("Warning: untrusted X11 forwarding setup failed: "
+			    "xauth key data not generated");
 		}
 	}
 
@@ -451,7 +454,7 @@ client_x11_get_proto(const char *display, const char *xauth_path,
 		u_int8_t rnd[16];
 		u_int i;
 
-		logit("Warning: No xauth data; "
+		debug("Warning: No xauth data; "
 		    "using fake authentication data for X11 forwarding.");
 		strlcpy(proto, SSH_X11_PROTO, sizeof proto);
 		arc4random_buf(rnd, sizeof(rnd));
@@ -1146,6 +1149,10 @@ process_escapes(Channel *c, Buffer *bin, Buffer *bout, Buffer *berr,
 	if (len <= 0)
 		return (0);
 
+	#ifdef DEBUG
+	debug("NX> 280 Processing the escape chars in context: 1");
+	#endif
+
 	for (i = 0; i < (u_int)len; i++) {
 		/* Get one character at a time. */
 		ch = buf[i];
@@ -1419,6 +1426,11 @@ client_process_input(fd_set *readset)
 			 * character and have to process the characters one
 			 * by one.
 			 */
+
+			#ifdef DEBUG
+			debug("NX> 280 Processing the escape chars in context: 2");
+			#endif
+
 			if (process_escapes(NULL, &stdin_buffer,
 			    &stdout_buffer, &stderr_buffer, buf, len) == -1)
 				return;
@@ -1547,6 +1559,10 @@ client_simple_escape_filter(Channel *c, char *buf, int len)
 {
 	if (c->extended_usage != CHAN_EXTENDED_WRITE)
 		return 0;
+
+	#ifdef DEBUG
+	debug("NX> 280 Processing the escape chars in context: 3");
+	#endif
 
 	return process_escapes(c, &c->input, &c->output, &c->extended,
 	    buf, len);

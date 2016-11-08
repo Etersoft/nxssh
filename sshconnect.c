@@ -495,6 +495,11 @@ ssh_connect_direct(const char *host, struct addrinfo *aitop,
 
 	debug("Connection established.");
 
+	#ifdef TEST
+	logit("NX> 280 SSH connection established with fd: %d",
+		sock);
+	#endif
+
 	/* Set SO_KEEPALIVE if requested. */
 	if (want_keepalive &&
 	    setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&on,
@@ -1177,7 +1182,7 @@ check_host_key(char *hostname, struct sockaddr *hostaddr, u_short port,
 	if (options.check_host_ip && host_status != HOST_CHANGED &&
 	    ip_status == HOST_CHANGED) {
 		snprintf(msg, sizeof(msg),
-		    "Warning: the %s host key for '%.200s' "
+		    "NX> 212 Warning: the %s host key for '%.200s' "
 		    "differs from the key for the IP address '%.128s'"
 		    "\nOffending key for IP in %s:%lu",
 		    type, host, ip, ip_found->file, ip_found->line);
@@ -1385,10 +1390,14 @@ ssh_login(Sensitive *sensitive, const char *orighost,
 	debug("Authenticating to %s:%d as '%s'", host, port, server_user);
 	if (compat20) {
 		ssh_kex2(host, hostaddr, port);
+		if (NxModeEnabled)
+			logit("NX> 202 Authenticating user: %.200s", server_user);
 		ssh_userauth2(local_user, server_user, host, sensitive);
 	} else {
 #ifdef WITH_SSH1
 		ssh_kex(host, hostaddr);
+		if (NxModeEnabled)
+			logit("NX> 202 Authenticating user: %.200s", server_user);
 		ssh_userauth1(local_user, server_user, host, sensitive);
 #else
 		fatal("ssh1 is not supported");

@@ -1239,7 +1239,7 @@ load_identity_file(Identity *id)
 		return NULL;
 	}
 	snprintf(prompt, sizeof prompt,
-	    "Enter passphrase for key '%.100s': ", id->filename);
+	    "NX> 210  Enter passphrase for key '%.100s': ", id->filename);
 	for (i = 0; i <= options.number_of_password_prompts; i++) {
 		if (i == 0)
 			passphrase = "";
@@ -1896,7 +1896,11 @@ authmethod_lookup(const char *name)
 		for (method = authmethods; method->name != NULL; method++)
 			if (strcmp(name, method->name) == 0)
 				return method;
-	debug2("Unrecognized authentication method name: %s", name ? name : "NULL");
+	if (NxAuthOnlyModeEnabled) {
+		debug2("Skipping authentication method name: %s", name ? name : "NULL");
+	} else {
+		debug2("Unrecognized authentication method name: %s", name ? name : "NULL");
+	}
 	return NULL;
 }
 

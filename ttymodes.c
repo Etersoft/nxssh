@@ -302,7 +302,7 @@ tty_make_modes(int fd, struct termios *tiop)
 			goto end;
 		}
 		if (tcgetattr(fd, &tio) == -1) {
-			logit("tcgetattr: %.100s", strerror(errno));
+			// logit("tcgetattr: %.100s", strerror(errno));
 			goto end;
 		}
 	} else
@@ -371,7 +371,7 @@ tty_parse_modes(int fd, int *n_bytes_ptr)
 	 * modes, they will initially have reasonable values.
 	 */
 	if (tcgetattr(fd, &tio) == -1) {
-		logit("tcgetattr: %.100s", strerror(errno));
+		// logit("tcgetattr: %.100s", strerror(errno));
 		failure = -1;
 	}
 

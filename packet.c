@@ -1452,6 +1452,11 @@ ssh_packet_read_seqnr(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 			timeoutp = &timeout;
 		}
 		/* Wait for some data to arrive. */
+
+		#ifdef TEST
+		debug("NX> 280 Calling the NX select in context: 7");
+		#endif
+
 		for (;;) {
 			if (state->packet_timeout_ms != -1) {
 				ms_to_timeval(&timeout, ms_remain);
@@ -1479,7 +1484,7 @@ ssh_packet_read_seqnr(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 
 		#ifdef TEST
 		logit("NX> 280 Reading: %u bytes from fd: %d in context: 7",
-			sizeof(buf), connection_in);
+			sizeof(buf), state->connection_in);
 		#endif
 
 		len = read(state->connection_in, buf, sizeof(buf));
@@ -2275,6 +2280,11 @@ ssh_packet_write_wait(struct ssh *ssh)
 			ms_remain = state->packet_timeout_ms;
 			timeoutp = &timeout;
 		}
+
+		#ifdef TEST
+		debug("NX> 280 Calling the NX select in context: 9");
+		#endif
+
 		for (;;) {
 			if (state->packet_timeout_ms != -1) {
 				ms_to_timeval(&timeout, ms_remain);
@@ -2329,6 +2339,17 @@ ssh_packet_not_very_much_data_to_write(struct ssh *ssh)
 void
 ssh_packet_set_tos(struct ssh *ssh, int tos)
 {
+#if defined(IP_TOS) && !defined(IP_TOS_IS_BROKEN)
+	if (ssh_packet_connection_is_on_socket(ssh)) {
+		debug("NX> 286 Setting %s on fd: %d",
+			(tos == IPTOS_LOWDELAY ? "IPTOS_LOWDELAY" : "IPTOS_THROUGHPUT"),
+			ssh->state->connection_in);
+	}
+#else
+	debug("NX> 286 WARNING! Not setting TOS on fd: %d with IP_TOS: %d IP_TOS_IS_BROKEN: %d",
+		ssh->state->connection_in, IP_TOS, IP_TOS_IS_BROKEN);
+#endif
+
 #ifndef IP_TOS_IS_BROKEN
 	if (!ssh_packet_connection_is_on_socket(ssh))
 		return;
@@ -2360,6 +2381,12 @@ ssh_packet_set_tos(struct ssh *ssh, int tos)
 void
 ssh_packet_set_interactive(struct ssh *ssh, int interactive, int qos_interactive, int qos_bulk)
 {
+
+	debug("NX> 286 Called packet_set_interactive() for fd: %d interactive is: %d",
+		ssh->state->connection_in, interactive);
+	debug("NX> 286 Forcing interactive to: %d for fd: %d",
+		interactive, ssh->state->connection_in);
+
 	struct session_state *state = ssh->state;
 
 	if (state->set_interactive_called)

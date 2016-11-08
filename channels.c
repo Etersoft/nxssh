@@ -3676,11 +3676,13 @@ channel_request_remote_forwarding(struct Forward *fwd)
 
 		/* Wait for response from the remote side. */
 		type = packet_read();
+		logit("%d",type);
 		switch (type) {
 		case SSH_SMSG_SUCCESS:
 			success = 1;
 			break;
 		case SSH_SMSG_FAILURE:
+			logit("Warning: Server denied remote port forwarding.");
 			break;
 		default:
 			/* Unknown packet */
