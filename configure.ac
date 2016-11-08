@@ -47,6 +47,18 @@ AC_PATH_PROG([NROFF], [nroff])
 AC_PATH_PROG([MANDOC], [mandoc])
 AC_SUBST([TEST_SHELL], [sh])
 
+#
+# Add the specific NX settings.
+#
+
+AC_SUBST(NXCOMPINC)
+AC_SUBST(NXCOMPLIBS)
+
+CFLAGS="-g -O3"
+
+NXCOMPINC="-I../nxcomp"
+NXCOMPLIBS="-L../nxcomp -lXcomp -lstdc++ -lpng -ljpeg -lz"
+
 dnl select manpage formatter
 if test "x$MANDOC" != "x" ; then
 	MANFMT="$MANDOC"
@@ -571,7 +583,8 @@ case "$host" in
 	;;
 *-*-cygwin*)
 	check_for_libcrypt_later=1
-	LIBS="$LIBS /usr/lib/textreadmode.o"
+	dont_check_for_resolv=1
+	LIBS="$LIBS /usr/lib/textmode.o /usr/lib/libminires.a"
 	AC_DEFINE([HAVE_CYGWIN], [1], [Define if you are on Cygwin])
 	AC_DEFINE([USE_PIPES], [1], [Use PIPES instead of a socketpair()])
 	AC_DEFINE([NO_UID_RESTORATION_TEST], [1],
@@ -4076,6 +4089,7 @@ if test "x$ac_cv_libc_defines_sys_nerr" = "xyes" ; then
 	AC_DEFINE([HAVE_SYS_NERR], [1], [Define if your system defines sys_nerr])
 fi
 
+if test "x$dont_check_for_resolv" != "x1"; then
 # Check libraries needed by DNS fingerprint support
 AC_SEARCH_LIBS([getrrsetbyname], [resolv],
 	[AC_DEFINE([HAVE_GETRRSETBYNAME], [1],
@@ -4142,6 +4156,7 @@ return 0;
 		],
 		[ AC_MSG_RESULT([no]) ]
 )
+fi
 
 # Check whether user wants SELinux support
 SELINUX_MSG="no"
