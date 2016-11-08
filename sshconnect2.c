@@ -82,6 +82,11 @@ extern char *client_version_string;
 extern char *server_version_string;
 extern Options options;
 
+extern int NxAuthOnlyModeEnabled;
+extern int NXServerMode;
+extern int NxAdminModeEnabled;
+extern int NXStdinPassEnabled;
+
 /*
  * SSH2 key exchange
  */

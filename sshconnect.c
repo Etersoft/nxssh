@@ -78,6 +78,10 @@ static int matching_host_key_dns = 0;
 
 static pid_t proxy_command_pid = 0;
 
+extern int NxAuthOnlyModeEnabled;
+extern int NxAdminModeEnabled;
+extern int webproxy_flag;
+
 /* import */
 extern Options options;
 extern char *__progname;

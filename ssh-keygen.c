@@ -59,6 +59,7 @@
 #include "krl.h"
 #include "digest.h"
 #include "utf8.h"
+#include "servconf.h"
 
 #ifdef WITH_OPENSSL
 # define DEFAULT_KEY_TYPE_NAME "rsa"
@@ -181,6 +182,18 @@ int rounds = 0;
 extern char *__progname;
 
 char hostname[NI_MAXHOST];
+
+
+/* NX MODE */
+
+/*
+ * This declarations are needed to compile ssh-keygen without linking to nxcomp
+ */
+
+int NxModeEnabled = 0;
+int NxAuthOnlyModeEnabled = 0;
+int NXStdinPassEnabled = 0;
+ServerOptions options;
 
 #ifdef WITH_OPENSSL
 /* moduli.c */
@@ -845,7 +858,7 @@ fingerprint_one_key(const struct sshkey *public, const char *comment)
 	ra = sshkey_fingerprint(public, fingerprint_hash, SSH_FP_RANDOMART);
 	if (fp == NULL || ra == NULL)
 		fatal("%s: sshkey_fingerprint failed", __func__);
-	mprintf("%u %s %s (%s)\n", sshkey_size(public), fp,
+	printf("%u %s %s (%s)\n", sshkey_size(public), fp,
 	    comment ? comment : "no comment", sshkey_type(public));
 	if (log_level >= SYSLOG_LEVEL_VERBOSE)
 		printf("%s\n", ra);
@@ -1169,7 +1182,7 @@ known_hosts_find_delete(struct hostkey_foreach_line *l, void *_ctx)
 				known_hosts_hash(l, ctx);
 			else if (print_fingerprint) {
 				fp = sshkey_fingerprint(l->key, fptype, rep);
-				mprintf("%s %s %s %s\n", ctx->host,
+				printf("%s %s %s %s\n", ctx->host,
 				    sshkey_type(l->key), fp, l->comment);
 				free(fp);
 			} else
@@ -1320,7 +1333,7 @@ do_change_passphrase(struct passwd *pw)
 		fatal("Failed to load key %s: %s", identity_file, ssh_err(r));
 	}
 	if (comment)
-		mprintf("Key has comment '%s'\n", comment);
+		printf("Key has comment '%s'\n", comment);
 
 	/* Ask the new passphrase (twice). */
 	if (identity_new_passphrase) {
@@ -2462,6 +2475,18 @@ main(int argc, char **argv)
 			break;
 #ifdef WITH_OPENSSL
 		/* Moduli generation/screening */
+		case 'W':
+			generator_wanted = (u_int32_t)strtonum(optarg, 1,
+			    UINT_MAX, &errstr);
+			if (errstr)
+				fatal("Desired generator has bad value: %s (%s)",
+					optarg, errstr);
+			break;
+		case 'M':
+			memory = (u_int32_t)strtonum(optarg, 1, UINT_MAX, &errstr);
+			if (errstr)
+				fatal("Memory limit is %s: %s", errstr, optarg);
+			break;
 		case 'G':
 			do_gen_candidates = 1;
 			if (strlcpy(out_file, optarg, sizeof(out_file)) >=
@@ -2474,34 +2499,21 @@ main(int argc, char **argv)
 		case 'j':
 			start_lineno = strtoul(optarg, NULL, 10);
 			break;
-		case 'K':
-			if (strlen(optarg) >= PATH_MAX)
-				fatal("Checkpoint filename too long");
-			checkpoint = xstrdup(optarg);
-			break;
-		case 'M':
-			memory = (u_int32_t)strtonum(optarg, 1, UINT_MAX,
-			    &errstr);
-			if (errstr)
-				fatal("Memory limit is %s: %s", errstr, optarg);
-			break;
-		case 'S':
-			/* XXX - also compare length against bits */
-			if (BN_hex2bn(&start, optarg) == 0)
-				fatal("Invalid start point.");
-			break;
 		case 'T':
 			do_screen_candidates = 1;
 			if (strlcpy(out_file, optarg, sizeof(out_file)) >=
 			    sizeof(out_file))
 				fatal("Output filename too long");
 			break;
-		case 'W':
-			generator_wanted = (u_int32_t)strtonum(optarg, 1,
-			    UINT_MAX, &errstr);
-			if (errstr != NULL)
-				fatal("Desired generator invalid: %s (%s)",
-				    optarg, errstr);
+		case 'K':
+			if (strlen(optarg) >= PATH_MAX)
+				fatal("Checkpoint filename too long");
+			checkpoint = xstrdup(optarg);
+			break;
+		case 'S':
+			/* XXX - also compare length against bits */
+			if (BN_hex2bn(&start, optarg) == 0)
+				fatal("Invalid start point.");
 			break;
 #endif /* WITH_OPENSSL */
 		case '?':

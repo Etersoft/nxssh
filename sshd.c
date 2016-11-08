@@ -131,6 +131,30 @@
 
 extern char *__progname;
 
+/* NX MODE */
+
+/*
+ * This declarations are needed to compile sshd without linking to nxcomp
+ */
+
+
+int NxModeEnabled = 0;
+int nx_check_switch = 0;
+int nx_switch_received = 0;
+int nx_switch_forward = 0;
+int nx_open_proxy_connection() {return 0;}
+int nx_check_proxy_authentication(int proxy_fd) {return 0;}
+int nx_switch_client_side_descriptors(Channel *channel, int proxy_fd) {return 0;}
+int nx_switch_forward_descriptors(Channel *channel) {return 0;}
+int nx_check_channel_input(Channel *channel, char *data, int *length, int limit) {return 0;}
+int nx_switch_forward_port(Channel *channel) {return 0;}
+int nx_proxy_select (int maxfds, fd_set *readfds, fd_set *writefds,
+                         fd_set *exceptfds, struct timeval *timeout)
+{
+  return select(maxfds, readfds, writefds, exceptfds, timeout);
+}
+void nx_set_socket_options(int fd, int blocking) {}
+
 /* Server configuration options. */
 ServerOptions options;
 

@@ -47,6 +47,11 @@
 #include "ssh.h"
 #include "uidswap.h"
 
+extern int NxAuthOnlyModeEnabled;
+extern int NXStdinPassEnabled;
+extern int NXServerMode;
+extern int NxAdminModeEnabled;
+
 static char *
 ssh_askpass(char *askpass, const char *msg)
 {
