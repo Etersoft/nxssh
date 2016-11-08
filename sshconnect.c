@@ -817,6 +817,8 @@ ssh_connect_direct(const char *host, struct addrinfo *aitop,
 				logit("NX> 200 Connected to address: %.200s on port: %.200s", ntop, strport);
 			break;	/* Successful connection. */
 		}
+		/* Sleep a moment before retrying. */
+		sleep(1);
 	}
 
 	/* Return failure if we didn't get a successful connection. */
