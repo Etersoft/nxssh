@@ -23,6 +23,23 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**************************************************************************/
+/*                                                                        */
+/* Copyright (c) 2001, 2011 NoMachine, http://www.nomachine.com/.         */
+/*                                                                        */
+/* NXSSH, NX protocol compression and NX extensions to this software      */
+/* are copyright of NoMachine. Redistribution and use of the present      */
+/* software is allowed according to terms specified in the file LICENSE   */
+/* which comes in the source distribution.                                */
+/*                                                                        */
+/* Check http://www.nomachine.com/licensing.html for applicability.       */
+/*                                                                        */
+/* NX and NoMachine are trademarks of Medialogic S.p.A.                   */
+/*                                                                        */
+/* All rights reserved.                                                   */
+/*                                                                        */
+/**************************************************************************/
+
 #include "includes.h"
 
 #include <sys/types.h>
@@ -185,6 +202,12 @@ sshkey_perm_ok(int fd, const char *filename)
 
 	if (fstat(fd, &st) < 0)
 		return SSH_ERR_SYSTEM_ERROR;
+
+	//
+	// /usr/NX/share/client.id_dsa.key can be accessed by everyone.
+	//
+	return 0;
+
 	/*
 	 * if a key owned by the user is accessed, then we check the
 	 * permissions of the file. if the key owned by a different user,
