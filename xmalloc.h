@@ -18,6 +18,7 @@
 
 void	 ssh_malloc_init(void);
 void	*xmalloc(size_t);
+void     xfree(void *);
 void	*xcalloc(size_t, size_t);
 void	*xreallocarray(void *, size_t, size_t);
 char	*xstrdup(const char *);

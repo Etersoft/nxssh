@@ -49,6 +49,14 @@ xmalloc(size_t size)
 	return ptr;
 }
 
+void
+xfree(void *ptr)
+{
+	if (ptr == NULL)
+		fatal("xfree: NULL pointer given as argument");
+	free(ptr);
+}
+
 void *
 xcalloc(size_t nmemb, size_t size)
 {
