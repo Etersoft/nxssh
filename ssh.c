@@ -1221,7 +1221,7 @@ main(int ac, char **av)
 		logit("NX> 285 Setting the preferred NX options");
 
 		tty_flag    = 0;
-		no_tty_flag = 1;
+		options.request_tty = REQUEST_TTY_NO;
 
 		options.escape_char = SSH_ESCAPECHAR_NONE;
 
