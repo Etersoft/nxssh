@@ -2179,13 +2179,13 @@ void nx_dump_buffer(Buffer *buffer)
         unsigned int i;
         unsigned int l;
 
-        unsigned char *p = buffer->buf;
+        unsigned char *p = buffer->d;
 
         char line[136];
 
         debug("---");
 
-        for (i = buffer->offset, l = 0; i < buffer->end; i++, l++)
+        for (i = buffer->off, l = 0; i < buffer->size; i++, l++)
         {
                 line[l] = p[i];
 
