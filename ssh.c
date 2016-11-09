@@ -323,11 +323,12 @@ int deleteOffendingKey(char * file_name , unsigned int raw)
 static void
 usage(void)
 {
+	//NX change -E for -H param
 	fprintf(stderr,
 "usage: nxssh [-nx|-nxservermode|-nxadminmode|-nxauthonly|-nxstdinpass]\n"
 "             [-delkey known_hosts row] [-BE] [-1246AaCfgkMNnqsTtVvXxY]\n"
 "             [-b bind_address] [-c cipher_spec]\n"
-"             [-D [bind_address:]port] [-E log_file] [-e escape_char]\n"
+"             [-D [bind_address:]port] [-H log_file] [-e escape_char]\n"
 "             [-F configfile] [-I pkcs11] [-i identity_file]\n"
 "             [-J [user@]host[:port]] [-L address] [-l login_name] [-m mac_spec]\n"
 "             [-O ctl_cmd] [-o option] [-p port] [-Q query_option] [-R address]\n"
@@ -798,7 +799,7 @@ main(int ac, char **av)
 
  again:
 	while ((opt = getopt(ac, av, "1246ab:c:e:fgi:kl:m:no:p:qstvx"
-	    "ACD:E:F:GI:J:KL:MNO:PQ:R:S:TVw:W:XYBEy")) != -1) {
+	    "ACD:H:F:GI:J:KL:MNO:P:Q:R:S:TVw:W:XYBEy")) != -1) {
 		switch (opt) {
 		case '1':
 			options.protocol = SSH_PROTO_1;
@@ -828,7 +829,8 @@ main(int ac, char **av)
 		case 'y':
 			use_syslog = 1;
 			break;
-		case 'E':
+		//NX change -E for -H param
+		case 'H':
 			logfile = optarg;
 			break;
 		case 'G':
@@ -1302,12 +1304,13 @@ main(int ac, char **av)
 		fatal("Cannot fork into background without a command "
 		    "to execute.");
 
+	//NX change -E for -H param
 	/*
 	 * Initialize "log" output.  Since we are the client all output
-	 * goes to stderr unless otherwise specified by -y or -E.
+	 * goes to stderr unless otherwise specified by -y or -H.
 	 */
 	if (use_syslog && logfile != NULL)
-		fatal("Can't specify both -y and -E");
+		fatal("Can't specify both -y and -H");
 	if (logfile != NULL)
 		log_redirect_stderr_to(logfile);
 	log_init(argv0,
