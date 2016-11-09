@@ -17,6 +17,7 @@
 
 #include "includes.h"
 #include "log.h"
+#include "openbsd-compat/sys-queue.h"
 #include "channels.h"
 #include "xmalloc.h"
 
