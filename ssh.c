@@ -660,6 +660,7 @@ main(int ac, char **av)
 	u_char conn_hash[SSH_DIGEST_MAX_LENGTH];
 
 	int nx_skip_config_file = 0;
+	nx_proxy_init();
 
 	if(ac > 1 && strcmp( av[1], "-nxstdinpass" ) == 0 ) {
 		NXStdinPassEnabled = 1;

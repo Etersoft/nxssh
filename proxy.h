@@ -64,6 +64,11 @@ extern int  nx_switch_forward;
 int nx_check_channel_input(Channel *channel, char *data, int *length, int limit);
 
 /*
+ * Init buffer
+ */
+void nx_proxy_init();
+
+/*
  * Replace the select() with the version managing
  * the NX descriptors.
  */

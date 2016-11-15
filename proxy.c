@@ -302,6 +302,11 @@ static int nx_set_nodelay(int fd);
 static int nx_set_keepalive(int fd);
 static int nx_set_lowdelay(int fd);
 
+void nx_proxy_init()
+{
+    buffer_init((&nx_input_buffer));
+}
+
 int nx_proxy_select(int maxfds, fd_set *readfds, fd_set *writefds,
                         fd_set *exceptfds, struct timeval *timeout)
 {
