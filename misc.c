@@ -609,7 +609,7 @@ char *
 tilde_expand_filename(const char *filename, uid_t uid)
 {
 	const char *path, *sep;
-	char user[128], *ret;
+	char user[128], *ret, *pwpath;
 	struct passwd *pw;
 	u_int len, slash;
 
@@ -629,31 +629,19 @@ tilde_expand_filename(const char *filename, uid_t uid)
 	} else if ((pw = getpwuid(uid)) == NULL)	/* ~/path */
 		fatal("tilde_expand_filename: No such uid %ld", (long)uid);
 
-	if(options.home)
-    {
-	    if (strlcpy(ret, options.home, sizeof(ret)) >= sizeof(ret))
-			fatal("tilde_expand_filename: Path too long");
+	pwpath = options.home ? options.home : pw->pw_dir;
 
 	/* Make sure directory has a trailing '/' */
-	    len = strlen(options.home);
-	if ((len == 0 || options.home[len - 1] != '/') &&
-	        strlcat(ret, "/", sizeof(ret)) >= sizeof(ret))
-		fatal("tilde_expand_filename: Path too long");
-    }
-    else
-    {
-		/* Make sure directory has a trailing '/' */
-		len = strlen(pw->pw_dir);
-		if (len == 0 || pw->pw_dir[len - 1] != '/')
-			sep = "/";
-		else
-			sep = "";
-	}
+	len = strlen(pwpath);
+	if (len == 0 || pwpath[len - 1] != '/')
+		sep = "/";
+	else
+		sep = "";
 	/* Skip leading '/' from specified path */
 	if (path != NULL)
 		filename = path + 1;
 
-	if (xasprintf(&ret, "%s%s%s", pw->pw_dir, sep, filename) >= PATH_MAX)
+	if (xasprintf(&ret, "%s%s%s", pwpath, sep, filename) >= PATH_MAX)
 		fatal("tilde_expand_filename: Path too long");
 
 	return (ret);
