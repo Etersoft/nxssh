@@ -2205,7 +2205,7 @@ void nx_dump_buffer(Buffer *buffer)
                         line[l]     = '\\';
                         line[l + 1] = '\0';
 
-                        debug(line);
+                        debug("%s", line);
 
                         l = 0;
                 }
@@ -2215,7 +2215,7 @@ void nx_dump_buffer(Buffer *buffer)
 
         if (line[0] != '\0')
         {
-            debug(line);
+            debug("%s", line);
         }
 
         debug("---");
@@ -2245,7 +2245,7 @@ void nx_dump_string(char *string)
                         line[l]     = '\\';
                         line[l + 1] = '\0';
 
-                        debug(line);
+                        debug("%s", line);
 
                         l = 0;
                 }
@@ -2255,7 +2255,7 @@ void nx_dump_string(char *string)
 
         if (line[0] != '\0')
         {
-            debug(line);
+            debug("%s", line);
         }
 
         debug("---");
