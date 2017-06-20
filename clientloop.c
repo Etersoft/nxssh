@@ -448,8 +448,9 @@ client_x11_get_proto(const char *display, const char *xauth_path,
 			if (f)
 				pclose(f);
 		} else {
-			debug("Warning: untrusted X11 forwarding setup failed: "
-			    "xauth key data not generated");
+			// FIXME eterbug #11676
+			//debug("Warning: untrusted X11 forwarding setup failed: "
+			//    "untrusted xauth key data not generated");
 		}
 	}
 
@@ -460,8 +461,9 @@ client_x11_get_proto(const char *display, const char *xauth_path,
 
 	/* Don't fall back to fake X11 data for untrusted forwarding */
 	if (!trusted && !got_data) {
-		error("Warning: untrusted X11 forwarding setup failed: "
-		    "xauth key data not generated");
+		// FIXME eterbug #11676
+		//error("Warning: untrusted X11 forwarding setup failed: "
+		//    "xauth key data not generated");
 		return -1;
 	}
 
