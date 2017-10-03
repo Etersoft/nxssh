@@ -10,6 +10,8 @@ Group: Networking/Remote access
 License: GPL, MIT/X11 for X11 bits
 Url: https://github.com/openssh/openssh-portable
 
+Source: %name-%version.tar
+
 %description
 ....
 
