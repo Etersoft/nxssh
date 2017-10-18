@@ -56,8 +56,8 @@ AC_SUBST(NXCOMPLIBS)
 
 CFLAGS="-g -O3"
 
-NXCOMPINC="-I../nxcomp"
-NXCOMPLIBS="-L../nxcomp -lXcomp -lstdc++ -lpng -ljpeg -lz"
+NXCOMPINC="-Inx"
+NXCOMPLIBS="-lXcomp -lstdc++ -lpng -ljpeg -lz"
 
 dnl select manpage formatter
 if test "x$MANDOC" != "x" ; then

@@ -18,6 +18,7 @@ sysconfdir=@sysconfdir@
 piddir=@piddir@
 srcdir=@srcdir@
 top_srcdir=@top_srcdir@
+includedir=@includedir@
 
 DESTDIR=
 VPATH=@srcdir@
@@ -45,7 +46,7 @@ PATHS= -DSSHDIR=\"$(sysconfdir)\" \
 
 CC=@CC@
 LD=@LD@
-CFLAGS=@CFLAGS@
+CFLAGS=@CFLAGS@ -I$(includedir)/nx
 CPPFLAGS=-I. -I$(srcdir) @CPPFLAGS@ $(PATHS) @DEFS@
 LIBS=@LIBS@
 K5LIBS=@K5LIBS@

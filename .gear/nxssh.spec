@@ -24,10 +24,14 @@ Source: %name-%version.tar
 %make_build || %make
 
 %install
-install -m755 nxssh %buildroot%_bindir/
+mkdir -p %buildroot%_bindir
+install -m755 nxssh nxsshd nxssh-keygen %buildroot%_bindir/
 
 %files
-%_bindir/nxssh
+%_bindir/*
 
 
 %changelog
+* Wed Oct 18 2017 Pavel Vainerman <pv@altlinux.ru> 7.5-alt0.1
+- initial commit
+
