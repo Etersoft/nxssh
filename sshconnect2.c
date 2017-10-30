@@ -384,6 +384,13 @@ Authmethod authmethods[] = {
 };
 
 Authmethod nxauthmethods_pubkey[] = {
+#ifdef GSSAPI
+	{"gssapi-with-mic",
+		userauth_gssapi,
+		NULL,
+		&options.gss_authentication,
+		NULL},
+#endif
 	{"publickey",
 		userauth_pubkey,
 		&options.pubkey_authentication,
