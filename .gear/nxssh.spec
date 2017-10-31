@@ -18,7 +18,7 @@ BuildRequires: libkrb5-devel
 %endif
 
 %description
-....
+Openssh portable (etersoft edition)
 
 %prep
 %setup
