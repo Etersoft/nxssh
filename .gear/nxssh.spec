@@ -2,7 +2,7 @@
 
 Name: nxssh
 Version: 7.5
-Release: alt0.3
+Release: alt0.4
 Summary: Openssh portable (etersoft edition)
 
 Packager: Pavel Vainerman <pv@altlinux.ru>
@@ -12,6 +12,8 @@ License: GPL, MIT/X11 for X11 bits
 Url: https://github.com/openssh/openssh-portable
 
 Source: %name-%version.tar
+
+Requires: nx >= 3.5.1.1
 
 %if_enabled kerberos5
 BuildRequires: libkrb5-devel
@@ -43,6 +45,9 @@ install -m755 nxssh nxsshd nxssh-keygen %buildroot%_bindir/
 
 
 %changelog
+* Wed Nov 08 2017 Pavel Vainerman <pv@altlinux.ru> 7.5-alt0.4
+- fixed bug for SSL session
+
 * Wed Nov 01 2017 Pavel Vainerman <pv@altlinux.ru> 7.5-alt0.3
 - fixed bug in spec file (--enable-kerberos5 --> --with-kerberos5)
 
