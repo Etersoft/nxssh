@@ -2073,6 +2073,48 @@ channel_post_open(Channel *c, fd_set *readset, fd_set *writeset)
 		return;
 	channel_handle_efd(c, readset, writeset);
 	channel_check_window(c);
+
+	/*
+	* If we received the switch command then
+	* tie the channel to the running proxy or
+	* to descriptors inherited from nxserver.
+	*/
+
+	if (nx_check_switch && nx_switch_received)
+	{
+		if (nx_switch_forward == 1)
+		{
+			if (nx_switch_forward_descriptors(c) < 0)
+			{
+					fatal("NX> 290 Error while switching communication");
+			}
+		}
+		else if (nx_switch_forward == 2)
+		{
+			if (nx_switch_forward_port(c) < 0)
+			{
+					fatal("NX> 290 Error while switching communication");
+			}
+		}
+		else
+		{
+			int proxy_fd;
+
+			proxy_fd = nx_open_proxy_connection();
+
+			if (proxy_fd < 0)
+			{
+				fatal("NX> 290 Error while switching communication");
+			}
+
+			nx_check_proxy_authentication(proxy_fd);
+
+			if (nx_switch_client_side_descriptors(c, proxy_fd) < 0)
+			{
+				fatal("NX> 290 Error while switching communication");
+			}
+		}
+	}
 }
 
 static u_int
@@ -2966,14 +3008,22 @@ channel_input_ieof(int type, u_int32_t seq, void *ctxt)
 		packet_disconnect("Received ieof for nonexistent channel %d.", id);
 	if (channel_proxy_upstream(c, type, seq, ctxt))
 		return 0;
-	chan_rcvd_ieof(c);
 
-	/* XXX force input close */
-	if (c->force_drain && c->istate == CHAN_INPUT_OPEN) {
-		debug("channel %d: FORCE input drain", c->self);
-		c->istate = CHAN_INPUT_WAIT_DRAIN;
-		if (buffer_len(&c->input) == 0)
-			chan_ibuf_empty(c);
+	if (nx_check_switch && !nx_switch_received)
+	{
+		debug("NX> 280 Ignoring EOF on the monitored channel");
+	}
+	else
+	{
+		chan_rcvd_ieof(c);
+
+		/* XXX force input close */
+		if (c->force_drain && c->istate == CHAN_INPUT_OPEN) {
+			debug("channel %d: FORCE input drain", c->self);
+			c->istate = CHAN_INPUT_WAIT_DRAIN;
+			if (buffer_len(&c->input) == 0)
+				chan_ibuf_empty(c);
+		}
 	}
 	return 0;
 }
@@ -3030,8 +3080,16 @@ channel_input_oclose(int type, u_int32_t seq, void *ctxt)
 		packet_disconnect("Received oclose for nonexistent channel %d.", id);
 	if (channel_proxy_upstream(c, type, seq, ctxt))
 		return 0;
+
 	packet_check_eom();
-	chan_rcvd_oclose(c);
+	if (nx_check_switch && !nx_switch_received)
+	{
+		debug("NX> 280 Ignoring CLOSE on the monitored channel");
+	}
+	else
+	{
+		chan_rcvd_oclose(c);
+	}
 	return 0;
 }
 
