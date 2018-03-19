@@ -12,9 +12,9 @@ build and public:
     # вынимаем через ssh, чтобы потом смочь сделать коммит
     - git remote | grep -q gitlab || git remote add gitlab git@gitlab.eterfund.ru:rx-etersoft/nxssh.git
     - /usr/bin/rpmlog -q -r -l
-    - korinf -f nxssh.spec x86_64/ALTLinux/p8 /var/ftp/pvt/Etersoft/RX@Etersoft/unstable
-    - korinf -f nxssh.spec x86_64/ALTLinux/Sisyphus /var/ftp/pvt/Etersoft/RX@Etersoft/unstable
-    - korinf -f nxssh.spec x86_64/ALTLinux/p7 /var/ftp/pvt/Etersoft/RX@Etersoft/unstable
+    - korinf -f .gear/nxssh.spec x86_64/ALTLinux/p8 /var/ftp/pvt/Etersoft/RX@Etersoft/unstable
+    - korinf -f .gear/nxssh.spec x86_64/ALTLinux/Sisyphus /var/ftp/pvt/Etersoft/RX@Etersoft/unstable
+    - korinf -f .gear/nxssh.spec x86_64/ALTLinux/p7 /var/ftp/pvt/Etersoft/RX@Etersoft/unstable
     - git push -f --tags gitlab HEAD:ci/latest-build
     - git push -f --tags gitlab HEAD:master
     
