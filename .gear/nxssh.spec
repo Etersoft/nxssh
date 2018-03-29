@@ -2,7 +2,7 @@
 
 Name: nxssh
 Version: 7.5
-Release: alt1
+Release: alt2
 Summary: Openssh portable (etersoft edition)
 
 Packager: Pavel Vainerman <pv@altlinux.ru>
@@ -55,6 +55,9 @@ install -m755 nxssh nxsshd nxssh-keygen %buildroot%_bindir/
 
 
 %changelog
+* Fri Mar 30 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt2
+- fixed openssh confdir (eterbug #12796)
+
 * Tue Mar 20 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt1
 - added gitlab-ci.yml
 - (gitlab-ci): fixed spec name
