@@ -28,6 +28,12 @@ Openssh portable (etersoft edition)
 
 %prep
 %setup
+confdir=""
+[ -r "/etc/openssh/ssh_config" ] && confdir="/openssh"
+[ -r "/etc/ssh/ssh_config" ] && confdir="/ssh"
+[ -r "/etc/ssh_config" ] && confdir="/"
+
+%__subst "s|-DSSHDIR=\\\\\"\$(sysconfdir)\\\\\"|-DSSHDIR=\\\\\"\$(sysconfdir)${confdir}\\\\\"|g" Makefile.in 
 
 %build
 with_kerberos=
