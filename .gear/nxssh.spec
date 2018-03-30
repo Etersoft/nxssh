@@ -17,7 +17,7 @@ Requires: nx >= 3.5.1.1
 
 # Automatically added by buildreq on Wed Nov 08 2017
 # optimized out: gnu-config libcom_err-devel libkrb5-devel nx perl python-base python-modules python3 python3-base zlib-devel
-BuildRequires: libjpeg-devel libpam-devel libpng-devel libssl-devel libstdc++-devel nx-devel
+BuildRequires: libjpeg-devel libpam-devel libpng-devel libssl-devel libstdc++-devel nx-devel openssh-clients
 
 %if_enabled kerberos5
 BuildRequires: libkrb5-devel
