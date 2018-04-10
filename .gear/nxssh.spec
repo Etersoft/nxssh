@@ -13,11 +13,11 @@ Url: https://github.com/openssh/openssh-portable
 
 Source: %name-%version.tar
 
-Requires: nx >= 3.5.1.1
+Requires: nx-libs >= 3.5.0.31
 
 # Automatically added by buildreq on Wed Nov 08 2017
 # optimized out: gnu-config libcom_err-devel libkrb5-devel nx perl python-base python-modules python3 python3-base zlib-devel
-BuildRequires: libjpeg-devel libpam-devel libpng-devel libssl-devel libstdc++-devel nx-devel openssh-clients
+BuildRequires: libjpeg-devel libpam-devel libpng-devel libssl-devel libstdc++-devel nx-libs-devel openssh-clients
 
 %if_enabled kerberos5
 BuildRequires: libkrb5-devel
