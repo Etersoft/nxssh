@@ -13,6 +13,8 @@ Url: https://github.com/openssh/openssh-portable
 
 Source: %name-%version.tar
 
+Patch1: 0001-fix-openssl-1.1.patch-eterbug-12901.patch
+
 Requires: nx-libs >= 3.5.0.31
 
 # Automatically added by buildreq on Wed Nov 08 2017
@@ -34,6 +36,11 @@ confdir=""
 [ -r "/etc/ssh_config" ] && confdir="/"
 
 %__subst "s|-DSSHDIR=\\\\\"\$(sysconfdir)\\\\\"|-DSSHDIR=\\\\\"\$(sysconfdir)${confdir}\\\\\"|g" Makefile.in 
+
+# fix build with openssl 1.1
+if [ -s %_libdir/libssl.so.1.1 ] ; then
+%patch1 -p1
+fi
 
 %build
 with_kerberos=
