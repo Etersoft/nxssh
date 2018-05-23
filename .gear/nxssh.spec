@@ -2,7 +2,7 @@
 
 Name: nxssh
 Version: 7.5
-Release: alt4
+Release: alt5
 Summary: Openssh portable (etersoft edition)
 
 Packager: Pavel Vainerman <pv@altlinux.ru>
@@ -62,6 +62,9 @@ install -m755 nxssh nxsshd nxssh-keygen %buildroot%_bindir/
 
 
 %changelog
+* Wed May 23 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt5
+- restore fix-openssl-1.1.patch
+
 * Thu Apr 12 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt4
 - update build requires: use nx-libs
 
