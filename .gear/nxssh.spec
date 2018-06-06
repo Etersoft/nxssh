@@ -30,12 +30,6 @@ Openssh portable (etersoft edition)
 
 %prep
 %setup
-confdir=""
-[ -r "/etc/openssh/ssh_config" ] && confdir="/openssh"
-[ -r "/etc/ssh/ssh_config" ] && confdir="/ssh"
-[ -r "/etc/ssh_config" ] && confdir="/"
-
-%__subst "s|-DSSHDIR=\\\\\"\$(sysconfdir)\\\\\"|-DSSHDIR=\\\\\"\$(sysconfdir)${confdir}\\\\\"|g" Makefile.in 
 
 # fix build with openssl 1.1
 if [ -s %_libdir/libssl.so.1.1 ] ; then
@@ -43,15 +37,23 @@ if [ -s %_libdir/libssl.so.1.1 ] ; then
 fi
 
 %build
+
+[ -r "/etc/openssh/ssh_config" ] && confdir="/openssh"
+[ -r "/etc/ssh/ssh_config" ] && confdir="/ssh"
+[ -r "/etc/ssh_config" ] && confdir="/"
+
+%__subst "s|-DSSHDIR=\\\\\"\$(sysconfdir)\\\\\"|-DSSHDIR=\\\\\"\$(sysconfdir)${confdir}\\\\\"|g" Makefile.in 
 with_kerberos=
 %if_enabled kerberos5
 with_kerberos="--with-kerberos5"
 %endif
 
-
 %autoreconf
 %configure --without-zlib-version-check ${with_kerberos}
 %make_build || %make
+
+# check ssh config path
+grep "/etc${confdir}/ssh_config" nxssh
 
 %install
 mkdir -p %buildroot%_bindir
