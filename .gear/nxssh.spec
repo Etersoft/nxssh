@@ -2,7 +2,7 @@
 
 Name: nxssh
 Version: 7.5
-Release: alt5
+Release: alt6
 Summary: Openssh portable (etersoft edition)
 
 Packager: Pavel Vainerman <pv@altlinux.ru>
@@ -64,6 +64,9 @@ install -m755 nxssh nxsshd nxssh-keygen %buildroot%_bindir/
 
 
 %changelog
+* Wed Jun 06 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt6
+- added path validation for ssh config (eterbug #12807)
+
 * Wed May 23 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt5
 - restore fix-openssl-1.1.patch
 
