@@ -2,7 +2,7 @@
 
 Name: nxssh
 Version: 7.5
-Release: alt7
+Release: alt8
 
 Summary: Openssh portable (Etersoft edition) for using with NX
 
@@ -61,6 +61,9 @@ install -m755 nxssh %buildroot%_bindir/
 %_bindir/nxssh
 
 %changelog
+* Thu Jun 28 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt8
+- (CI): added test build
+
 * Sat Jun 23 2018 Vitaly Lipatov <lav@altlinux.ru> 7.5-alt7
 - cleanup spec, pack only nxssh
 
