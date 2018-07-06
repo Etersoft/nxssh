@@ -54,10 +54,8 @@ AC_SUBST([TEST_SHELL], [sh])
 AC_SUBST(NXCOMPINC)
 AC_SUBST(NXCOMPLIBS)
 
-CFLAGS="-g -O3"
-
-NXCOMPINC="-Inx"
-NXCOMPLIBS="-lXcomp -lstdc++ -lpng -ljpeg -lz"
+NXCOMPINC="-I$includedir/nx"
+NXCOMPLIBS="-lXcomp"
 
 dnl select manpage formatter
 if test "x$MANDOC" != "x" ; then
