@@ -2,7 +2,7 @@
 
 Name: nxssh
 Version: 7.5
-Release: alt9
+Release: alt10
 
 Summary: Openssh portable (Etersoft edition) for using with NX in RX@Etersoft
 
@@ -59,6 +59,10 @@ install -m755 nxssh %buildroot%_bindir/
 %_bindir/nxssh
 
 %changelog
+* Wed Aug 08 2018 Etersoft Builder <builder@etersoft.ru> 7.5-alt10
+- (CI): added build for c7
+- revert "(CI): added build for c7"
+
 * Fri Jul 06 2018 Vitaly Lipatov <lav@altlinux.ru> 7.5-alt9
 - fix bug with kerberos build missing
 - drop gcc-c++ and other image libs buildrequires
