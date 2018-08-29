@@ -59,7 +59,6 @@ install -m755 nxssh %buildroot%_bindir/
 %_bindir/nxssh
 
 %changelog
-<<<<<<< HEAD
 * Wed Aug 29 2018 Pavel Vainerman <pv@altlinux.ru> 7.5-alt11
 - fix openssl 1.1 detection, use grep -a for check text in binary
 
