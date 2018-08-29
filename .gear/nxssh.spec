@@ -32,7 +32,7 @@ Openssh portable (Etersoft edition) for using with NX in RX@Etersoft.
 %setup
 
 # fix build with openssl 1.1
-if [ -s %_libdir/libssl.so.1.1 ] ; then
+if [ -s %_libdir/libssl.so.1.1 ] || [ -s /%_lib/libssl.so.1.1 ] ; then
 %patch1 -p1
 fi
 
@@ -49,7 +49,7 @@ confdir=""
 %make_build || %make
 
 echo "checking ssh config path"
-grep "/etc${confdir}/ssh_config" nxssh
+grep -a "/etc${confdir}/ssh_config" nxssh
 
 %install
 mkdir -p %buildroot%_bindir/
